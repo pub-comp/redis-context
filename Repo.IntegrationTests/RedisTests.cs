@@ -75,6 +75,12 @@ namespace Payoneer.Infra.Repo.IntegrationTests
         }
 
         [TestMethod]
+        public void SetTryGetStringWithSeparateTtlCommand()
+        {
+            SetTryGetTest("valU", TimeSpan.FromSeconds(1.0), doSetTtlInSeparateCommand: true);
+        }
+
+        [TestMethod]
         public void SetTryGetInt()
         {
             SetTryGetTest(5);
@@ -319,11 +325,19 @@ namespace Payoneer.Infra.Repo.IntegrationTests
             return result;
         }
 
-        private void SetTryGetTest<TData>(TData value, TimeSpan? ttl = null)
+        private void SetTryGetTest<TData>(TData value, TimeSpan? ttl = null,
+            bool doSetTtlInSeparateCommand = false)
         {
             var key = TestContext.TestName;
 
-            Set(key, value, ttl);
+            bool doOverrideTtl = ttl.HasValue && doSetTtlInSeparateCommand;
+            var ttl1 = doOverrideTtl ? null : ttl;
+
+            Set(key, value, ttl1);
+
+            if (doOverrideTtl)
+                redisContext.SetTimeToLive(key, ttl);
+
             TtlSleep(ttl);
             var result = TryGet<TData>(key, out TData resultValue);
 
