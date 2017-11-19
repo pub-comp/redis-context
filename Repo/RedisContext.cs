@@ -504,12 +504,13 @@ namespace Payoneer.Infra.Repo
         {
             var redisValue = this.Database.StringGet(key);
 
+            // If key in DB
             // If expiry was requested, then update
             // If no expiry was requested, then update only if there is currently an expiry set
-            if (expiry.HasValue || GetTimeToLive(key).HasValue)
+            if (redisValue != default(RedisValue)
+                && (expiry.HasValue || GetTimeToLive(key).HasValue))
             {
-                if (redisValue != default(RedisValue))
-                    this.Database.StringSet(key, redisValue, expiry);
+                this.Database.KeyExpire(key, expiry);
             }
         }
 
