@@ -184,16 +184,29 @@ namespace Payoneer.Infra.Repo
 
         protected static bool ToNullableInt(RedisValue redisValue, out int? value)
         {
-            var cond = redisValue.IsInteger || redisValue.IsNull;
-            value = cond ? (int?)redisValue : default(int?);
-            return cond;
+            value = null;
+
+            if (redisValue.IsNull)
+                return true;
+
+            int result;
+            if (redisValue.TryParse(out result))
+            {
+                value = result;
+                return true;
+            }
+
+            return false;
         }
 
         protected static bool ToInt(RedisValue redisValue, out int value)
         {
-            var cond = redisValue.IsInteger;
-            value = cond ? (int)redisValue : default(int);
-            return cond;
+            value = default(int);
+
+            if (redisValue.IsNull)
+                return true;
+
+            return redisValue.TryParse(out value);
         }
 
         protected static bool ToNullableLong(RedisValue redisValue, out long? value)
@@ -252,18 +265,16 @@ namespace Payoneer.Infra.Repo
 
         protected static bool ToNullableBool(RedisValue redisValue, out bool? value)
         {
-            var cond = redisValue.IsInteger || redisValue.IsNull;
-            value = cond
-                ? (redisValue.IsInteger ? 0 != (int)redisValue : (bool?)null)
-                : null;
-            return cond;
+            var result = ToNullableInt(redisValue, out int? intValue);
+            value = intValue.HasValue ? intValue.Value != 0 : (bool?)null;
+            return result;
         }
 
         protected static bool ToBool(RedisValue redisValue, out bool value)
         {
-            var cond = redisValue.IsInteger;
-            value = cond && (0 != (int)redisValue);
-            return cond;
+            var result = ToInt(redisValue, out int intValue);
+            value = intValue != 0;
+            return result;
         }
 
         #endregion

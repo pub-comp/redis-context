@@ -61,6 +61,90 @@ namespace Payoneer.Infra.Repo.IntegrationTests
             SetTryGetTest("valU", TimeSpan.FromSeconds(1.0));
         }
 
+        [TestMethod]
+        public void SetTryGetInt()
+        {
+            SetTryGetTest(5);
+        }
+
+        [TestMethod]
+        public void SetTryGetNullableInt()
+        {
+            SetTryGetTest((int?)4);
+        }
+
+        [TestMethod]
+        public void SetTryGetNullableIntNull()
+        {
+            SetTryGetTest((int?)null);
+        }
+
+        [TestMethod]
+        public void SetTryGetLong()
+        {
+            SetTryGetTest(-3L);
+        }
+
+        [TestMethod]
+        public void SetTryGetNullableLong()
+        {
+            SetTryGetTest((long?)-7L);
+        }
+
+        [TestMethod]
+        public void SetTryGetNullableLongNull()
+        {
+            SetTryGetTest((long?)null);
+        }
+
+        [TestMethod]
+        public void SetTryGetDouble()
+        {
+            SetTryGetTest(1.4);
+        }
+
+        [TestMethod]
+        public void SetTryGetNullableDouble()
+        {
+            SetTryGetTest((double?)0.6);
+        }
+
+        [TestMethod]
+        public void SetTryGetNullableDoubleNull()
+        {
+            SetTryGetTest((double?)null);
+        }
+
+        [TestMethod]
+        public void SetTryGetBoolTrue()
+        {
+            SetTryGetTest(true);
+        }
+
+        [TestMethod]
+        public void SetTryGetNullableBoolTrue()
+        {
+            SetTryGetTest((bool?)true);
+        }
+
+        [TestMethod]
+        public void SetTryGetBoolFalse()
+        {
+            SetTryGetTest(false);
+        }
+
+        [TestMethod]
+        public void SetTryGetNullableBoolFalse()
+        {
+            SetTryGetTest((bool?)false);
+        }
+
+        [TestMethod]
+        public void SetTryGetNullableBoolNull()
+        {
+            SetTryGetTest((bool?)null);
+        }
+
         #endregion
 
         private void SetTryGetTest<TData>(TData value, TimeSpan? ttl = null)
