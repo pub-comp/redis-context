@@ -3,46 +3,57 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using StackExchange.Redis;
 
 namespace Payoneer.Infra.Repo.IntegrationTests
 {
     [TestClass]
     public class RedisTests
     {
-        private RedisContext redisContext;
+        private RedisTestContext redisContext;
 
         #region Initialization
 
         [TestInitialize]
         public void TestInitialize()
         {
-            redisContext = new RedisContext(db: 1);
-            ClearDb(redisContext);
+            redisContext = RedisTestContext.Retry(() => new RedisTestContext(db: 1), 5);
+            ClearDb(redisContext, TestContext);
+        }
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            redisContext?.Connection?.Dispose();
         }
 
         public TestContext TestContext { get; set; }
 
-        private static void ClearDb(RedisContext redisContext)
+        private static void ClearDb(RedisContext redisContext, TestContext testContext)
         {
-            IEnumerable<string> keys = null;
-
-            const int maxAttempts = 3;
-            for (int attempts = 0; attempts < maxAttempts; attempts++)
-            {
-                try
-                {
-                    keys = redisContext.GetKeys();
-                    break;
-                }
-                catch (StackExchange.Redis.RedisTimeoutException)
-                {
-                    if (attempts < maxAttempts - 1)
-                        Thread.Sleep(100);
-                    else
-                        throw;
-                }
-            }
+            var keys = RedisTestContext.Retry(() => redisContext.GetKeys(testContext.TestName + '*'), 5);
             redisContext.Delete(keys.ToArray());
+        }
+
+        public class RedisTestContext : RedisContext
+        {
+            public RedisTestContext(int db) : base(db: db)
+            {
+            }
+
+            public new IConnectionMultiplexer Connection => base.Connection;
+
+            public new IDatabase Database => base.Database;
+
+            public new static TResult Retry<TResult>(Func<TResult> func, int maxAttempts)
+            {
+                return RedisContext.Retry(func, maxAttempts);
+            }
+
+            public new static void Retry(Action action, int maxAttempts)
+            {
+                RedisContext.Retry(action, maxAttempts);
+            }
         }
 
         #endregion

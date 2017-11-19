@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using StackExchange.Redis;
+using NLog;
 
 namespace Payoneer.Infra.Repo
 {
@@ -10,6 +12,7 @@ namespace Payoneer.Infra.Repo
         private readonly IConnectionMultiplexer connection;
         private readonly int databaseNumber;
         private readonly List<string> hosts;
+        private readonly ILogger log;
 
         public RedisContext(string host = "localhost", int port = 6379, string password = null, int db = 0)
             : this(ToConnectionString(host, port, password, db))
@@ -18,6 +21,7 @@ namespace Payoneer.Infra.Repo
 
         public RedisContext(string connectionString)
         {
+            this.log = LogManager.GetLogger(typeof(RedisContext).FullName);
             var connectionOptions = ToConnectionOptions(connectionString);
             this.databaseNumber = connectionOptions.RedisConfigurationOptions.DefaultDatabase ?? 0;
             this.hosts = connectionOptions.Hosts;
@@ -279,59 +283,137 @@ namespace Payoneer.Infra.Repo
 
         #endregion
 
+        private const int MaxAttempts = 5;
+        private const int RetryDelay = 500;
+
+        protected static TResult Retry<TResult>(Func<TResult> func, int maxAttempts = MaxAttempts)
+        {
+            TResult result = default(TResult);
+
+            for (int attempts = 0; attempts < maxAttempts; attempts++)
+            {
+                try
+                {
+                    result = func();
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    if (!TestExceptionForRetry(ex))
+                    {
+                        throw;
+                    }
+
+                    if (attempts < maxAttempts - 1)
+                    {
+                        LogManager.GetLogger(typeof(RedisContext).FullName).Warn(
+                            ex, $"Retrying, attempt #{attempts}");
+                        Thread.Sleep(RetryDelay * (attempts + 1));
+                    }
+                    else
+                    {
+                        LogManager.GetLogger(typeof(RedisContext).FullName).Error(
+                            ex, $"Failed, attempt #{attempts}");
+                        throw;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        protected static void Retry(Action action, int maxAttempts = MaxAttempts)
+        {
+            for (int attempts = 0; attempts < maxAttempts; attempts++)
+            {
+                try
+                {
+                    action();
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    if (!TestExceptionForRetry(ex))
+                    {
+                        throw;
+                    }
+
+                    if (attempts < maxAttempts - 1)
+                    {
+                        LogManager.GetLogger(typeof(RedisContext).FullName).Warn(
+                            ex, $"Retrying, attempt #{attempts}");
+                        Thread.Sleep(RetryDelay * (attempts + 1));
+                    }
+                    else
+                    {
+                        LogManager.GetLogger(typeof(RedisContext).FullName).Error(
+                            ex, $"Failed, attempt #{attempts}");
+                        throw;
+                    }
+                }
+            }
+        }
+
+        protected static bool TestExceptionForRetry(Exception ex)
+        {
+            return (ex is TimeoutException || ex is RedisException
+                || ex is AggregateException agrEx && agrEx.InnerExceptions
+                    .Any(ex2 => ex2 is TimeoutException || ex2 is RedisException));
+        }
+
         #region TryGet
 
         public bool TryGet(string key, out string value)
         {
-            var redisValue = this.Database.StringGet(key);
+            var redisValue = Retry(() => this.Database.StringGet(key));
             return ToString(redisValue, out value);
         }
 
         public bool TryGet(string key, out int? value)
         {
-            var redisValue = this.Database.StringGet(key);
+            var redisValue = Retry(() => this.Database.StringGet(key));
             return ToNullableInt(redisValue, out value);
         }
 
         public bool TryGet(string key, out int value)
         {
-            var redisValue = this.Database.StringGet(key);
+            var redisValue = Retry(() => this.Database.StringGet(key));
             return ToInt(redisValue, out value);
         }
 
         public bool TryGet(string key, out long? value)
         {
-            var redisValue = this.Database.StringGet(key);
+            var redisValue = Retry(() => this.Database.StringGet(key));
             return ToNullableLong(redisValue, out value);
         }
 
         public bool TryGet(string key, out long value)
         {
-            var redisValue = this.Database.StringGet(key);
+            var redisValue = Retry(() => this.Database.StringGet(key));
             return ToLong(redisValue, out value);
         }
 
         public bool TryGet(string key, out double? value)
         {
-            var redisValue = this.Database.StringGet(key);
+            var redisValue = Retry(() => this.Database.StringGet(key));
             return ToNullableDouble(redisValue, out value);
         }
 
         public bool TryGet(string key, out double value)
         {
-            var redisValue = this.Database.StringGet(key);
+            var redisValue = Retry(() => this.Database.StringGet(key));
             return ToDouble(redisValue, out value);
         }
 
         public bool TryGet(string key, out bool? value)
         {
-            var redisValue = this.Database.StringGet(key);
+            var redisValue = Retry(() => this.Database.StringGet(key));
             return ToNullableBool(redisValue, out value);
         }
 
         public bool TryGet(string key, out bool value)
         {
-            var redisValue = this.Database.StringGet(key);
+            var redisValue = Retry(() => this.Database.StringGet(key));
             return ToBool(redisValue, out value);
         }
 
@@ -341,47 +423,47 @@ namespace Payoneer.Infra.Repo
 
         public void Set(string key, string value, TimeSpan? expiry = null)
         {
-            this.Database.StringSet(key, value, expiry: expiry);
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
         }
 
         public void Set(string key, bool value, TimeSpan? expiry = null)
         {
-            this.Database.StringSet(key, value ? -1 : 0, expiry: expiry);
+            Retry(() => this.Database.StringSet(key, value ? -1 : 0, expiry: expiry));
         }
 
         public void Set(string key, bool? value, TimeSpan? expiry = null)
         {
-            this.Database.StringSet(key, value.HasValue ? (value.Value ? -1 : 0) : (int?)null, expiry: expiry);
+            Retry(() => this.Database.StringSet(key, value.HasValue ? (value.Value ? -1 : 0) : (int?)null, expiry: expiry));
         }
 
         public void Set(string key, double value, TimeSpan? expiry = null)
         {
-            this.Database.StringSet(key, value, expiry: expiry);
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
         }
 
         public void Set(string key, double? value, TimeSpan? expiry = null)
         {
-            this.Database.StringSet(key, value, expiry: expiry);
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
         }
 
         public void Set(string key, int value, TimeSpan? expiry = null)
         {
-            this.Database.StringSet(key, value, expiry: expiry);
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
         }
 
         public void Set(string key, int? value, TimeSpan? expiry = null)
         {
-            this.Database.StringSet(key, value, expiry: expiry);
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
         }
 
         public void Set(string key, long value, TimeSpan? expiry = null)
         {
-            this.Database.StringSet(key, value, expiry: expiry);
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
         }
 
         public void Set(string key, long? value, TimeSpan? expiry = null)
         {
-            this.Database.StringSet(key, value, expiry: expiry);
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
         }
 
         #endregion
@@ -390,12 +472,12 @@ namespace Payoneer.Infra.Repo
 
         public void Delete(string key)
         {
-            this.Database.KeyDelete(key);
+            Retry(() => this.Database.KeyDelete(key));
         }
 
         public void Delete(params string[] keys)
         {
-            this.Database.KeyDelete(keys.Select(k => (RedisKey)k).ToArray());
+            Retry(() => this.Database.KeyDelete(keys.Select(k => (RedisKey)k).ToArray()));
         }
 
         #endregion
@@ -404,7 +486,7 @@ namespace Payoneer.Infra.Repo
 
         public void SetOrAppend(string key, string value)
         {
-            this.Database.StringAppend(key, value);
+            Retry(() => this.Database.StringAppend(key, value));
         }
 
         #endregion
@@ -413,12 +495,12 @@ namespace Payoneer.Infra.Repo
 
         public long Increment(string key, long value)
         {
-            return this.Database.StringIncrement(key, value);
+            return Retry(() => this.Database.StringIncrement(key, value));
         }
 
         public double Increment(string key, double value)
         {
-            return this.Database.StringIncrement(key, value);
+            return Retry(() => this.Database.StringIncrement(key, value));
         }
 
         #endregion
@@ -427,12 +509,12 @@ namespace Payoneer.Infra.Repo
 
         public long Decrement(string key, long value)
         {
-            return this.Database.StringDecrement(key, value);
+            return Retry(() => this.Database.StringDecrement(key, value));
         }
 
         public double Decrement(string key, double value)
         {
-            return this.Database.StringDecrement(key, value);
+            return Retry(() => this.Database.StringDecrement(key, value));
         }
 
         #endregion
@@ -441,64 +523,55 @@ namespace Payoneer.Infra.Repo
         
         public string AtomicExchange(string key, string value)
         {
-            var redisValue = this.Database.StringGetSet(key, (RedisValue)value);
-
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
             return ToString(redisValue, out string previousValue) ? previousValue : default(string);
         }
 
         public int? AtomicExchange(string key, int? value)
         {
-            var redisValue = this.Database.StringGetSet(key, (RedisValue)value);
-
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
             return ToNullableInt(redisValue, out int? previousValue) ? previousValue : default(int?);
         }
 
         public int AtomicExchange(string key, int value)
         {
-            var redisValue = this.Database.StringGetSet(key, (RedisValue)value);
-
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
             return ToInt(redisValue, out int previousValue) ? previousValue : default(int);
         }
 
         public long? AtomicExchange(string key, long? value)
         {
-            var redisValue = this.Database.StringGetSet(key, (RedisValue)value);
-
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
             return ToNullableLong(redisValue, out long? previousValue) ? previousValue : default(long?);
         }
 
         public long AtomicExchange(string key, long value)
         {
-            var redisValue = this.Database.StringGetSet(key, (RedisValue)value);
-
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
             return ToLong(redisValue, out long previousValue) ? previousValue : default(long);
         }
 
         public double? AtomicExchange(string key, double? value)
         {
-            var redisValue = this.Database.StringGetSet(key, (RedisValue)value);
-
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
             return ToNullableDouble(redisValue, out double? previousValue) ? previousValue : default(double?);
         }
 
         public double AtomicExchange(string key, double value)
         {
-            var redisValue = this.Database.StringGetSet(key, (RedisValue)value);
-
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
             return ToDouble(redisValue, out double previousValue) ? previousValue : default(double);
         }
 
         public bool? AtomicExchange(string key, bool? value)
         {
-            var redisValue = this.Database.StringGetSet(key, (RedisValue)value);
-
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
             return ToNullableBool(redisValue, out bool? previousValue) ? previousValue : default(bool?);
         }
 
         public bool AtomicExchange(string key, bool value)
         {
-            var redisValue = this.Database.StringGetSet(key, (RedisValue)value);
-
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
             return ToBool(redisValue, out bool previousValue) && previousValue;
         }
 
@@ -508,12 +581,12 @@ namespace Payoneer.Infra.Repo
 
         public TimeSpan? GetTimeToLive(string key)
         {
-            return this.Database.KeyTimeToLive(key);
+            return Retry(() => this.Database.KeyTimeToLive(key));
         }
 
         public void SetTimeToLive(string key, TimeSpan? expiry)
         {
-            var redisValue = this.Database.StringGet(key);
+            var redisValue = Retry(() => this.Database.StringGet(key));
 
             // If key in DB
             // If expiry was requested, then update
@@ -521,7 +594,7 @@ namespace Payoneer.Infra.Repo
             if (redisValue != default(RedisValue)
                 && (expiry.HasValue || GetTimeToLive(key).HasValue))
             {
-                this.Database.KeyExpire(key, expiry);
+                Retry(() => this.Database.KeyExpire(key, expiry));
             }
         }
 
