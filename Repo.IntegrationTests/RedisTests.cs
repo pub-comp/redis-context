@@ -69,6 +69,12 @@ namespace Payoneer.Infra.Repo.IntegrationTests
         }
 
         [TestMethod]
+        public void SetTryGetStringDelete()
+        {
+            SetTryGetTest("valU", doDelete: true);
+        }
+
+        [TestMethod]
         public void SetTryGetStringTtl()
         {
             SetTryGetTest("valU", TimeSpan.FromSeconds(1.0));
@@ -326,7 +332,7 @@ namespace Payoneer.Infra.Repo.IntegrationTests
         }
 
         private void SetTryGetTest<TData>(TData value, TimeSpan? ttl = null,
-            bool doSetTtlInSeparateCommand = false)
+            bool doSetTtlInSeparateCommand = false, bool doDelete = false)
         {
             var key = TestContext.TestName;
 
@@ -338,10 +344,13 @@ namespace Payoneer.Infra.Repo.IntegrationTests
             if (doOverrideTtl)
                 redisContext.SetTimeToLive(key, ttl);
 
+            if (doDelete)
+                redisContext.Delete(key);
+
             TtlSleep(ttl);
             var result = TryGet<TData>(key, out TData resultValue);
 
-            if (ttl == null)
+            if (ttl == null && !doDelete)
             {
                 Assert.IsTrue(result);
                 Assert.AreEqual(value, resultValue);
