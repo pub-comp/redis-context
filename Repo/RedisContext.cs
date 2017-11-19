@@ -283,6 +283,8 @@ namespace Payoneer.Infra.Repo
 
         #endregion
 
+        #region Retry
+
         private const int MaxAttempts = 5;
         private const int RetryDelay = 500;
 
@@ -360,6 +362,8 @@ namespace Payoneer.Infra.Repo
                 || ex is AggregateException agrEx && agrEx.InnerExceptions
                     .Any(ex2 => ex2 is TimeoutException || ex2 is RedisException));
         }
+
+        #endregion
 
         #region TryGet
 
