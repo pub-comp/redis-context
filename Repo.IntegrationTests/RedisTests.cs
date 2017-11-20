@@ -39,7 +39,7 @@ namespace Payoneer.Infra.Repo.IntegrationTests
 
         public class RedisTestContext : RedisContext
         {
-            public RedisTestContext(int db) : base(db: db, commandFlags: CommandFlags.None)
+            public RedisTestContext(int db) : base(db: db)
             {
             }
 
@@ -356,6 +356,20 @@ namespace Payoneer.Infra.Repo.IntegrationTests
                 doInc: false, doDec: true, expectedDecResult: -1.1, expectedFinalResult: -1.1);
         }
 
+        [TestMethod]
+        public void Append_NoInit()
+        {
+            AppendTest(doSetInitialValue: false, appendSuffix: "-a",
+                doAppend: true, expectedFinalResult: "-a");
+        }
+
+        [TestMethod]
+        public void Append_Init()
+        {
+            AppendTest(initialValue: "1", doSetInitialValue: true, appendSuffix: "-a",
+                doAppend: true, expectedFinalResult: "1-a");
+        }
+
         #endregion
 
         #endregion
@@ -507,9 +521,22 @@ namespace Payoneer.Infra.Repo.IntegrationTests
             return result;
         }
 
-        private void SetTryGetTest<TData>(TData value, TimeSpan? ttl = null,
+        private void SetTryGetTest<TData>(
+            TData value, TimeSpan? ttl = null,
             bool doSetTtlInSeparateCommand = false, bool doDelete = false,
             bool doExchange = false, TData newValue = default(TData))
+        {
+            var retryAttempts = (doExchange) ? 5 : 1;
+            RedisTestContext.Retry(() =>
+                SetTryGetTestInner(
+                    value, ttl, doSetTtlInSeparateCommand, doDelete, doExchange, newValue
+                ), retryAttempts);
+        }
+
+        private void SetTryGetTestInner<TData>(
+            TData value, TimeSpan? ttl,
+            bool doSetTtlInSeparateCommand, bool doDelete,
+            bool doExchange, TData newValue)
         {
             var key = TestContext.TestName;
 
@@ -559,6 +586,26 @@ namespace Payoneer.Infra.Repo.IntegrationTests
             TData expectedIncResult = default(TData),
             TData expectedDecResult = default(TData),
             TData expectedFinalResult = default(TData))
+        {
+            var retryAttempts = (doInc || doDec) ? 5 : 1;
+            RedisTestContext.Retry(() =>
+                IncDecTestInner(
+                    doSetInitialValue, initialValue,
+                    incrementBy, decrementBy,
+                    doInc, doDec,
+                    expectedIncResult,
+                    expectedDecResult,
+                    expectedFinalResult
+                ), retryAttempts);
+        }
+
+        private void IncDecTestInner<TData>(
+            bool doSetInitialValue, TData initialValue,
+            TData incrementBy, TData decrementBy,
+            bool doInc, bool doDec,
+            TData expectedIncResult,
+            TData expectedDecResult,
+            TData expectedFinalResult)
         {
             var key = TestContext.TestName;
 
@@ -623,6 +670,45 @@ namespace Payoneer.Infra.Repo.IntegrationTests
                 AssertAreSimilar(Convert.ToDouble(expectedFinalResult), Convert.ToDouble(resultValue));
             }
             else throw new NotSupportedException($"{nameof(TData)} is not supported");
+        }
+
+        private void AppendTest(
+            bool doSetInitialValue, string initialValue = default(string),
+            string appendSuffix = default(string), bool doAppend = true,
+            string expectedFinalResult = default(string))
+        {
+            var retryAttempts = (doAppend) ? 5 : 1;
+            RedisTestContext.Retry(() =>
+                AppendTestInner(
+                    doSetInitialValue, initialValue, appendSuffix, doAppend, expectedFinalResult
+                    ), retryAttempts);
+        }
+
+        private void AppendTestInner(
+            bool doSetInitialValue, string initialValue,
+            string appendSuffix, bool doAppend,
+            string expectedFinalResult)
+        {
+            var key = TestContext.TestName;
+
+            if (doSetInitialValue)
+                Set(key, initialValue);
+
+            if (doAppend)
+                redisContext.SetOrAppend(key, appendSuffix);
+
+            var getResult = TryGet(key, out string resultValue);
+
+            if (doSetInitialValue || doAppend)
+            {
+                Assert.IsTrue(getResult);
+            }
+            else
+            {
+                Assert.IsFalse(getResult);
+            }
+
+            Assert.AreEqual(expectedFinalResult, resultValue);
         }
 
         private void AssertAreSimilar(double expected, double actual)
