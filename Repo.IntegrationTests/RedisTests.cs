@@ -175,10 +175,28 @@ namespace Payoneer.Infra.Repo.IntegrationTests
             SetTryGetTest("valU", TimeSpan.FromSeconds(1.0), doSetTtlInSeparateCommand: true);
         }
 
+        [TestMethod]
+        public void SetGetTTl()
+        {
+            Set(TestContext.TestName, "123", TimeSpan.FromSeconds(5.0));
+            var ttl = redisContext.GetTimeToLive(TestContext.TestName);
+            Assert.IsTrue(ttl.HasValue);
+            Assert.IsTrue(ttl.Value <= TimeSpan.FromSeconds(5.0));
+            Assert.IsTrue(ttl.Value >= TimeSpan.FromSeconds(1.0));
+        }
+
+        [TestMethod]
+        public void SetGetNoTTl()
+        {
+            Set(TestContext.TestName, "123");
+            var ttl = redisContext.GetTimeToLive(TestContext.TestName);
+            Assert.IsFalse(ttl.HasValue);
+        }
+
         #endregion
 
         #region Delete
-        
+
         [TestMethod]
         public void SetTryGetStringDelete()
         {
