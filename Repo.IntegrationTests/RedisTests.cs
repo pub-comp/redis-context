@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -39,7 +38,7 @@ namespace Payoneer.Infra.Repo.IntegrationTests
 
         public class RedisTestContext : RedisContext
         {
-            public RedisTestContext(int db) : base(db: db)
+            public RedisTestContext(int db) : base(nameof(RedisTests), db: db)
             {
             }
 
@@ -74,24 +73,6 @@ namespace Payoneer.Infra.Repo.IntegrationTests
         public void SetTryGetStringNull()
         {
             SetTryGetTest((string)null);
-        }
-
-        [TestMethod]
-        public void SetTryGetStringDelete()
-        {
-            SetTryGetTest("valU", doDelete: true);
-        }
-
-        [TestMethod]
-        public void SetTryGetStringTtl()
-        {
-            SetTryGetTest("valU", TimeSpan.FromSeconds(1.0));
-        }
-
-        [TestMethod]
-        public void SetTryGetStringWithSeparateTtlCommand()
-        {
-            SetTryGetTest("valU", TimeSpan.FromSeconds(1.0), doSetTtlInSeparateCommand: true);
         }
 
         [TestMethod]
@@ -176,6 +157,60 @@ namespace Payoneer.Infra.Repo.IntegrationTests
         public void SetTryGetNullableBoolNull()
         {
             SetTryGetTest((bool?)null);
+        }
+
+        #endregion
+
+        #region MyRegion
+        
+        [TestMethod]
+        public void SetTryGetStringTtl()
+        {
+            SetTryGetTest("valU", TimeSpan.FromSeconds(1.0));
+        }
+
+        [TestMethod]
+        public void SetTryGetStringWithSeparateTtlCommand()
+        {
+            SetTryGetTest("valU", TimeSpan.FromSeconds(1.0), doSetTtlInSeparateCommand: true);
+        }
+
+        #endregion
+
+        #region Delete
+        
+        [TestMethod]
+        public void SetTryGetStringDelete()
+        {
+            SetTryGetTest("valU", doDelete: true);
+        }
+
+        [TestMethod]
+        public void SetDeleteMany()
+        {
+            Set(TestContext.TestName + ".1", 1);
+            Set(TestContext.TestName + ".2", "two");
+            Set(TestContext.TestName + ".3", 3.0);
+            
+            var key1There = TryGet(TestContext.TestName + ".1", out int _);
+            var key2There = TryGet(TestContext.TestName + ".2", out string _);
+            var key3There = TryGet(TestContext.TestName + ".3", out double _);
+
+            Assert.IsTrue(key1There);
+            Assert.IsTrue(key2There);
+            Assert.IsTrue(key3There);
+
+            redisContext.Delete(
+                TestContext.TestName + ".1",
+                TestContext.TestName + ".3");
+
+            var key1StillThere = TryGet(TestContext.TestName + ".1", out int _);
+            var key2StillThere = TryGet(TestContext.TestName + ".2", out string _);
+            var key3StillThere = TryGet(TestContext.TestName + ".3", out double _);
+
+            Assert.IsFalse(key1StillThere);
+            Assert.IsTrue(key2StillThere);
+            Assert.IsFalse(key3StillThere);
         }
 
         #endregion
@@ -355,6 +390,10 @@ namespace Payoneer.Infra.Repo.IntegrationTests
             IncDecTest(doSetInitialValue: false, decrementBy: 1.1,
                 doInc: false, doDec: true, expectedDecResult: -1.1, expectedFinalResult: -1.1);
         }
+
+        #endregion
+
+        #region Append
 
         [TestMethod]
         public void Append_NoInit()
