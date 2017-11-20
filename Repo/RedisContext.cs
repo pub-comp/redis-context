@@ -9,23 +9,26 @@ namespace Payoneer.Infra.Repo
 {
     public class RedisContext : IRedisContext
     {
+        private readonly CommandFlags commandFlags;
         private readonly IConnectionMultiplexer connection;
         private readonly int databaseNumber;
         private readonly List<string> hosts;
         private readonly ILogger log;
 
-        public RedisContext(string host = "localhost", int port = 6379, string password = null, int db = 0)
-            : this(ToConnectionString(host, port, password, db))
+        public RedisContext(string host = "localhost", int port = 6379, string password = null, int db = 0,
+            CommandFlags commandFlags = CommandFlags.None)
+            : this(ToConnectionString(host, port, password, db), commandFlags)
         {
         }
 
-        public RedisContext(string connectionString)
+        public RedisContext(string connectionString, CommandFlags commandFlags)
         {
             this.log = LogManager.GetLogger(typeof(RedisContext).FullName);
             var connectionOptions = ToConnectionOptions(connectionString);
             this.databaseNumber = connectionOptions.RedisConfigurationOptions.DefaultDatabase ?? 0;
             this.hosts = connectionOptions.Hosts;
             this.connection = ConnectionMultiplexer.Connect(connectionOptions.RedisConfigurationOptions);
+            this.commandFlags = commandFlags;
         }
 
         #region Properties
@@ -190,6 +193,9 @@ namespace Payoneer.Infra.Repo
         {
             value = null;
 
+            if (!redisValue.HasValue)
+                return false;
+
             if (redisValue.IsNull)
                 return true;
 
@@ -207,6 +213,9 @@ namespace Payoneer.Infra.Repo
         {
             value = default(int);
 
+            if (!redisValue.HasValue)
+                return false;
+
             if (redisValue.IsNull)
                 return true;
 
@@ -216,6 +225,9 @@ namespace Payoneer.Infra.Repo
         protected static bool ToNullableLong(RedisValue redisValue, out long? value)
         {
             value = null;
+
+            if (!redisValue.HasValue)
+                return false;
 
             if (redisValue.IsNull)
                 return true;
@@ -234,6 +246,9 @@ namespace Payoneer.Infra.Repo
         {
             value = default(long);
 
+            if (!redisValue.HasValue)
+                return false;
+
             if (redisValue.IsNull)
                 return true;
 
@@ -243,6 +258,9 @@ namespace Payoneer.Infra.Repo
         protected static bool ToNullableDouble(RedisValue redisValue, out double? value)
         {
             value = null;
+
+            if (!redisValue.HasValue)
+                return false;
 
             if (redisValue.IsNull)
                 return true;
@@ -260,6 +278,9 @@ namespace Payoneer.Infra.Repo
         protected static bool ToDouble(RedisValue redisValue, out double value)
         {
             value = default(double);
+
+            if (!redisValue.HasValue)
+                return false;
 
             if (redisValue.IsNull)
                 return true;
@@ -369,55 +390,55 @@ namespace Payoneer.Infra.Repo
 
         public bool TryGet(string key, out string value)
         {
-            var redisValue = Retry(() => this.Database.StringGet(key));
+            var redisValue = Retry(() => this.Database.StringGet(key, flags: commandFlags));
             return ToString(redisValue, out value);
         }
 
         public bool TryGet(string key, out int? value)
         {
-            var redisValue = Retry(() => this.Database.StringGet(key));
+            var redisValue = Retry(() => this.Database.StringGet(key, flags: commandFlags));
             return ToNullableInt(redisValue, out value);
         }
 
         public bool TryGet(string key, out int value)
         {
-            var redisValue = Retry(() => this.Database.StringGet(key));
+            var redisValue = Retry(() => this.Database.StringGet(key, flags: commandFlags));
             return ToInt(redisValue, out value);
         }
 
         public bool TryGet(string key, out long? value)
         {
-            var redisValue = Retry(() => this.Database.StringGet(key));
+            var redisValue = Retry(() => this.Database.StringGet(key, flags: commandFlags));
             return ToNullableLong(redisValue, out value);
         }
 
         public bool TryGet(string key, out long value)
         {
-            var redisValue = Retry(() => this.Database.StringGet(key));
+            var redisValue = Retry(() => this.Database.StringGet(key, flags: commandFlags));
             return ToLong(redisValue, out value);
         }
 
         public bool TryGet(string key, out double? value)
         {
-            var redisValue = Retry(() => this.Database.StringGet(key));
+            var redisValue = Retry(() => this.Database.StringGet(key, flags: commandFlags));
             return ToNullableDouble(redisValue, out value);
         }
 
         public bool TryGet(string key, out double value)
         {
-            var redisValue = Retry(() => this.Database.StringGet(key));
+            var redisValue = Retry(() => this.Database.StringGet(key, flags: commandFlags));
             return ToDouble(redisValue, out value);
         }
 
         public bool TryGet(string key, out bool? value)
         {
-            var redisValue = Retry(() => this.Database.StringGet(key));
+            var redisValue = Retry(() => this.Database.StringGet(key, flags: commandFlags));
             return ToNullableBool(redisValue, out value);
         }
 
         public bool TryGet(string key, out bool value)
         {
-            var redisValue = Retry(() => this.Database.StringGet(key));
+            var redisValue = Retry(() => this.Database.StringGet(key, flags: commandFlags));
             return ToBool(redisValue, out value);
         }
 
@@ -427,47 +448,49 @@ namespace Payoneer.Infra.Repo
 
         public void Set(string key, string value, TimeSpan? expiry = null)
         {
-            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry, flags: commandFlags));
         }
 
         public void Set(string key, bool value, TimeSpan? expiry = null)
         {
-            Retry(() => this.Database.StringSet(key, value ? -1 : 0, expiry: expiry));
+            var intValue = value ? -1 : 0;
+            Retry(() => this.Database.StringSet(key, intValue, expiry: expiry, flags: commandFlags));
         }
 
         public void Set(string key, bool? value, TimeSpan? expiry = null)
         {
-            Retry(() => this.Database.StringSet(key, value.HasValue ? (value.Value ? -1 : 0) : (int?)null, expiry: expiry));
+            var intValue = value.HasValue ? (value.Value ? -1 : 0) : (int?)null;
+            Retry(() => this.Database.StringSet(key, intValue, expiry: expiry, flags: commandFlags));
         }
 
         public void Set(string key, double value, TimeSpan? expiry = null)
         {
-            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry, flags: commandFlags));
         }
 
         public void Set(string key, double? value, TimeSpan? expiry = null)
         {
-            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry, flags: commandFlags));
         }
 
         public void Set(string key, int value, TimeSpan? expiry = null)
         {
-            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry, flags: commandFlags));
         }
 
         public void Set(string key, int? value, TimeSpan? expiry = null)
         {
-            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry, flags: commandFlags));
         }
 
         public void Set(string key, long value, TimeSpan? expiry = null)
         {
-            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry, flags: commandFlags));
         }
 
         public void Set(string key, long? value, TimeSpan? expiry = null)
         {
-            Retry(() => this.Database.StringSet(key, value, expiry: expiry));
+            Retry(() => this.Database.StringSet(key, value, expiry: expiry, flags: commandFlags));
         }
 
         #endregion
@@ -476,12 +499,12 @@ namespace Payoneer.Infra.Repo
 
         public void Delete(string key)
         {
-            Retry(() => this.Database.KeyDelete(key));
+            Retry(() => this.Database.KeyDelete(key, flags: commandFlags));
         }
 
         public void Delete(params string[] keys)
         {
-            Retry(() => this.Database.KeyDelete(keys.Select(k => (RedisKey)k).ToArray()));
+            Retry(() => this.Database.KeyDelete(keys.Select(k => (RedisKey)k).ToArray(), flags: commandFlags));
         }
 
         #endregion
@@ -490,7 +513,7 @@ namespace Payoneer.Infra.Repo
 
         public void SetOrAppend(string key, string value)
         {
-            Retry(() => this.Database.StringAppend(key, value));
+            Retry(() => this.Database.StringAppend(key, value, flags: commandFlags));
         }
 
         #endregion
@@ -499,12 +522,12 @@ namespace Payoneer.Infra.Repo
 
         public long Increment(string key, long value)
         {
-            return Retry(() => this.Database.StringIncrement(key, value));
+            return Retry(() => this.Database.StringIncrement(key, value, flags: commandFlags));
         }
 
         public double Increment(string key, double value)
         {
-            return Retry(() => this.Database.StringIncrement(key, value));
+            return Retry(() => this.Database.StringIncrement(key, value, flags: commandFlags));
         }
 
         #endregion
@@ -513,12 +536,12 @@ namespace Payoneer.Infra.Repo
 
         public long Decrement(string key, long value)
         {
-            return Retry(() => this.Database.StringDecrement(key, value));
+            return Retry(() => this.Database.StringDecrement(key, value, flags: commandFlags));
         }
 
         public double Decrement(string key, double value)
         {
-            return Retry(() => this.Database.StringDecrement(key, value));
+            return Retry(() => this.Database.StringDecrement(key, value, flags: commandFlags));
         }
 
         #endregion
@@ -527,55 +550,55 @@ namespace Payoneer.Infra.Repo
         
         public string AtomicExchange(string key, string value)
         {
-            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value, flags: commandFlags));
             return ToString(redisValue, out string previousValue) ? previousValue : default(string);
         }
 
         public int? AtomicExchange(string key, int? value)
         {
-            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value, flags: commandFlags));
             return ToNullableInt(redisValue, out int? previousValue) ? previousValue : default(int?);
         }
 
         public int AtomicExchange(string key, int value)
         {
-            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value, flags: commandFlags));
             return ToInt(redisValue, out int previousValue) ? previousValue : default(int);
         }
 
         public long? AtomicExchange(string key, long? value)
         {
-            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value, flags: commandFlags));
             return ToNullableLong(redisValue, out long? previousValue) ? previousValue : default(long?);
         }
 
         public long AtomicExchange(string key, long value)
         {
-            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value, flags: commandFlags));
             return ToLong(redisValue, out long previousValue) ? previousValue : default(long);
         }
 
         public double? AtomicExchange(string key, double? value)
         {
-            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value, flags: commandFlags));
             return ToNullableDouble(redisValue, out double? previousValue) ? previousValue : default(double?);
         }
 
         public double AtomicExchange(string key, double value)
         {
-            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value, flags: commandFlags));
             return ToDouble(redisValue, out double previousValue) ? previousValue : default(double);
         }
 
         public bool? AtomicExchange(string key, bool? value)
         {
-            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value, flags: commandFlags));
             return ToNullableBool(redisValue, out bool? previousValue) ? previousValue : default(bool?);
         }
 
         public bool AtomicExchange(string key, bool value)
         {
-            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value));
+            var redisValue = Retry(() => this.Database.StringGetSet(key, (RedisValue)value, flags: commandFlags));
             return ToBool(redisValue, out bool previousValue) && previousValue;
         }
 
@@ -585,12 +608,12 @@ namespace Payoneer.Infra.Repo
 
         public TimeSpan? GetTimeToLive(string key)
         {
-            return Retry(() => this.Database.KeyTimeToLive(key));
+            return Retry(() => this.Database.KeyTimeToLive(key, flags: commandFlags));
         }
 
         public void SetTimeToLive(string key, TimeSpan? expiry)
         {
-            var redisValue = Retry(() => this.Database.StringGet(key));
+            var redisValue = Retry(() => this.Database.StringGet(key, flags: commandFlags));
 
             // If key in DB
             // If expiry was requested, then update

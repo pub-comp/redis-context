@@ -19,6 +19,8 @@ namespace Payoneer.Infra.Repo.IntegrationTests
         {
             redisContext = RedisTestContext.Retry(() => new RedisTestContext(db: 1), 5);
             ClearDb(redisContext, TestContext);
+
+            redisContext.Delete(TestContext.TestName);
         }
 
         [TestCleanup]
@@ -37,7 +39,7 @@ namespace Payoneer.Infra.Repo.IntegrationTests
 
         public class RedisTestContext : RedisContext
         {
-            public RedisTestContext(int db) : base(db: db)
+            public RedisTestContext(int db) : base(db: db, commandFlags: CommandFlags.None)
             {
             }
 
@@ -66,6 +68,12 @@ namespace Payoneer.Infra.Repo.IntegrationTests
         public void SetTryGetString()
         {
             SetTryGetTest("valU");
+        }
+
+        [TestMethod]
+        public void SetTryGetStringNull()
+        {
+            SetTryGetTest((string)null);
         }
 
         [TestMethod]
@@ -168,6 +176,124 @@ namespace Payoneer.Infra.Repo.IntegrationTests
         public void SetTryGetNullableBoolNull()
         {
             SetTryGetTest((bool?)null);
+        }
+
+        #endregion
+
+        #region SetExchangeTryGet
+
+        [TestMethod]
+        public void SetExchangeTryGetString()
+        {
+            SetTryGetTest("valU", doExchange: true, newValue: "newV");
+        }
+        
+        [TestMethod]
+        public void SetExchangeTryGetStringNullThenNot()
+        {
+            SetTryGetTest(null, doExchange: true, newValue: "newV");
+        }
+
+        [TestMethod][ExpectedException(typeof(ArgumentException))]
+        public void SetExchangeTryGetStringNotThenNull()
+        {
+            SetTryGetTest("valU", doExchange: true, newValue: null);
+        }
+
+        [TestMethod]
+        public void SetExchangeTryGetInt()
+        {
+            SetTryGetTest(5, doExchange: true, newValue: 7);
+        }
+
+        [TestMethod]
+        public void SetExchangeTryGetNullableInt()
+        {
+            SetTryGetTest((int?)4, doExchange: true, newValue: (int?)2);
+        }
+
+        [TestMethod]
+        public void SetExchangeTryGetNullableIntNullThenNot()
+        {
+            SetTryGetTest((int?)null, doExchange: true, newValue: (int?)9);
+        }
+
+        [TestMethod][ExpectedException(typeof(ArgumentException))]
+        public void SetExchangeTryGetNullableIntNotThenNull()
+        {
+            SetTryGetTest((int?)8, doExchange: true, newValue: (int?)null);
+        }
+
+        [TestMethod]
+        public void SetExchangeTryGetLong()
+        {
+            SetTryGetTest(-3L, doExchange: true, newValue: -4L);
+        }
+
+        [TestMethod]
+        public void SetExchangeTryGetNullableLong()
+        {
+            SetTryGetTest((long?)-7L, doExchange: true, newValue: 2L);
+        }
+
+        [TestMethod][ExpectedException(typeof(ArgumentException))]
+        public void SetExchangeTryGetNullableLongNull()
+        {
+            SetTryGetTest((long?)1L, doExchange: true, newValue: (long?)null);
+        }
+
+        [TestMethod]
+        public void SetExchangeTryGetDouble()
+        {
+            SetTryGetTest(1.4, doExchange: true, newValue: 4.5);
+        }
+
+        [TestMethod]
+        public void SetExchangeTryGetNullableDouble()
+        {
+            SetTryGetTest((double?)0.6, doExchange: true, newValue: (double?)-0.3);
+        }
+
+        [TestMethod][ExpectedException(typeof(ArgumentException))]
+        public void SetExchangeTryGetNullableDoubleNull()
+        {
+            SetTryGetTest((double?)0.4, doExchange: true, newValue: (double?)null);
+        }
+
+        [TestMethod]
+        public void SetExchangeTryGetBoolTrue()
+        {
+            SetTryGetTest(true, doExchange: true, newValue: false);
+        }
+
+        [TestMethod]
+        public void SetExchangeTryGetBoolFalse()
+        {
+            SetTryGetTest(false, doExchange: true, newValue: true);
+        }
+
+        [TestMethod]
+        public void SetExchangeTryGetNullableBoolTrue()
+        {
+            SetTryGetTest((bool?)true, doExchange: true, newValue: (bool?)false);
+        }
+
+        [TestMethod]
+        public void SetExchangeTryGetNullableBoolFalse()
+        {
+            SetTryGetTest((bool?)false, doExchange: true, newValue: (bool?)true);
+        }
+
+        [TestMethod]
+        public void SetExchangeTryGetNullableBoolNullThenNot()
+        {
+            SetTryGetTest((bool?)null, doExchange: true, newValue: (bool?)true);
+        }
+
+        [TestMethod][ExpectedException(typeof(ArgumentException))]
+        public void SetExchangeTryGetNullableBoolNotThenNull()
+        {
+            SetTryGetTest((bool?)false, doExchange: true, newValue: (bool?)null);
         }
 
         #endregion
@@ -275,6 +401,56 @@ namespace Payoneer.Infra.Repo.IntegrationTests
             else throw new NotSupportedException($"{nameof(TData)} is not supported");
         }
 
+        private TData AtomicExchange<TData>(string key, TData value)
+        {
+            if (typeof(TData) == typeof(string))
+            {
+                object result = redisContext.AtomicExchange(key, value as string);
+                return (TData)result;
+            }
+            else if (typeof(TData) == typeof(int?))
+            {
+                object result = redisContext.AtomicExchange(key, value as int?);
+                return (TData)result;
+            }
+            else if (typeof(TData) == typeof(int))
+            {
+                object result = redisContext.AtomicExchange(key, Convert.ToInt32(value));
+                return (TData)result;
+            }
+            else if (typeof(TData) == typeof(long?))
+            {
+                object result = redisContext.AtomicExchange(key, value as long?);
+                return (TData)result;
+            }
+            else if (typeof(TData) == typeof(long))
+            {
+                object result = redisContext.AtomicExchange(key, Convert.ToInt64(value));
+                return (TData)result;
+            }
+            else if (typeof(TData) == typeof(double?))
+            {
+                object result = redisContext.AtomicExchange(key, value as double?);
+                return (TData)result;
+            }
+            else if (typeof(TData) == typeof(double))
+            {
+                object result = redisContext.AtomicExchange(key, Convert.ToDouble(value));
+                return (TData)result;
+            }
+            else if (typeof(TData) == typeof(bool?))
+            {
+                object result = redisContext.AtomicExchange(key, value as bool?);
+                return (TData)result;
+            }
+            else if (typeof(TData) == typeof(bool))
+            {
+                object result = redisContext.AtomicExchange(key, Convert.ToBoolean(value));
+                return (TData)result;
+            }
+            else throw new NotSupportedException($"{nameof(TData)} is not supported");
+        }
+
         private bool TryGet<TData>(string key, out TData value)
         {
             bool result = false;
@@ -332,7 +508,8 @@ namespace Payoneer.Infra.Repo.IntegrationTests
         }
 
         private void SetTryGetTest<TData>(TData value, TimeSpan? ttl = null,
-            bool doSetTtlInSeparateCommand = false, bool doDelete = false)
+            bool doSetTtlInSeparateCommand = false, bool doDelete = false,
+            bool doExchange = false, TData newValue = default(TData))
         {
             var key = TestContext.TestName;
 
@@ -344,16 +521,30 @@ namespace Payoneer.Infra.Repo.IntegrationTests
             if (doOverrideTtl)
                 redisContext.SetTimeToLive(key, ttl);
 
+            TData exchangeResult = default(TData);
+            if (doExchange)
+                exchangeResult = AtomicExchange(key, newValue);
+
             if (doDelete)
                 redisContext.Delete(key);
 
             TtlSleep(ttl);
             var result = TryGet<TData>(key, out TData resultValue);
 
-            if (ttl == null && !doDelete)
+            if (ttl == null && !doDelete
+                && (!doExchange && value != null || doExchange && newValue != null))
             {
                 Assert.IsTrue(result);
-                Assert.AreEqual(value, resultValue);
+
+                if (!doExchange)
+                {
+                    Assert.AreEqual(value, resultValue);
+                }
+                else
+                {
+                    Assert.AreEqual(value, exchangeResult);
+                    Assert.AreEqual(newValue, resultValue);
+                }
             }
             else
             {
