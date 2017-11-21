@@ -60,6 +60,8 @@
     <Compile Include="..\VersionInfo.cs">
       <Link>Properties\VersionInfo.cs</Link>
     </Compile>
+    <Compile Include="RedisTestsUnnamedContext.cs" />
+    <Compile Include="RedisTestsNamedContext.cs" />
     <Compile Include="RedisTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

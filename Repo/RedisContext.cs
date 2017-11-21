@@ -700,9 +700,16 @@ namespace Payoneer.Infra.Repo
         /// <returns></returns>
         public IEnumerable<string> GetKeys(string pattern = null)
         {
-            return this.connection.GetServer(hosts.First())
+            var keys = this.connection.GetServer(hosts.First())
                 .Keys(this.databaseNumber, Key(pattern)).ToList()
                 .Select(rk => rk.ToString()).ToList();
+
+            if (string.IsNullOrEmpty(contextNamespace))
+                return keys;
+
+            var keyPrefixLength = Key(string.Empty).Length;
+            var keysWithoutPrefix = keys.Select(k => k.Substring(keyPrefixLength)).ToList();
+            return keysWithoutPrefix;
         }
 
         #endregion

@@ -6,31 +6,17 @@ using StackExchange.Redis;
 
 namespace Payoneer.Infra.Repo.IntegrationTests
 {
-    [TestClass]
-    public class RedisTests
+    public abstract class RedisTests
     {
-        private RedisTestContext redisContext;
+        // ReSharper disable once InconsistentNaming
+        protected RedisTestContext redisContext;
 
         #region Initialization
 
-        [TestInitialize]
-        public void TestInitialize()
-        {
-            redisContext = RedisTestContext.Retry(() => new RedisTestContext(db: 1), 5);
-            ClearDb(redisContext, TestContext);
-
-            redisContext.Delete(TestContext.TestName);
-        }
-
-        [TestCleanup]
-        public void TestCleanup()
-        {
-            redisContext?.Connection?.Dispose();
-        }
-
+        // ReSharper disable once UnusedAutoPropertyAccessor.Global
         public TestContext TestContext { get; set; }
 
-        private static void ClearDb(RedisContext redisContext, TestContext testContext)
+        protected static void ClearDb(RedisContext redisContext, TestContext testContext)
         {
             var keys = RedisTestContext.Retry(() => redisContext.GetKeys(testContext.TestName + '*'), 5);
             redisContext.Delete(keys.ToArray());
@@ -38,7 +24,7 @@ namespace Payoneer.Infra.Repo.IntegrationTests
 
         public class RedisTestContext : RedisContext
         {
-            public RedisTestContext(int db) : base(nameof(RedisTests), db: db)
+            public RedisTestContext(string name, int db) : base(name, db: db)
             {
             }
 
