@@ -3,14 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Repo", "Repo\Repo.csproj", "{DDF7AA4D-770A-4F91-944D-A741D3279D67}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RedisRepo", "RedisRepo\RedisRepo.csproj", "{DDF7AA4D-770A-4F91-944D-A741D3279D67}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5E973E57-BF0E-4B66-89AD-EFE35EBD8EAE}"
 	ProjectSection(SolutionItems) = preProject
 		VersionInfo.cs = VersionInfo.cs
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Repo.IntegrationTests", "Repo.IntegrationTests\Repo.IntegrationTests.csproj", "{9340B1EC-F865-4D8C-B1C7-7AC22744F0C4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RedisRepo.IntegrationTests", "RedisRepo.IntegrationTests\RedisRepo.IntegrationTests.csproj", "{9340B1EC-F865-4D8C-B1C7-7AC22744F0C4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

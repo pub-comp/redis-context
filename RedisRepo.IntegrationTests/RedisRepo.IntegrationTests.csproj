@@ -7,8 +7,8 @@
     <ProjectGuid>{9340B1EC-F865-4D8C-B1C7-7AC22744F0C4}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Payoneer.Infra.Repo.IntegrationTests</RootNamespace>
-    <AssemblyName>Payoneer.Infra.Repo.IntegrationTests</AssemblyName>
+    <RootNamespace>Payoneer.Infra.RedisRepo.IntegrationTests</RootNamespace>
+    <AssemblyName>Payoneer.Infra.RedisRepo.IntegrationTests</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -70,7 +70,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Repo\Repo.csproj">
+    <ProjectReference Include="..\RedisRepo\RedisRepo.csproj">
       <Project>{ddf7aa4d-770a-4f91-944d-a741d3279d67}</Project>
       <Name>Repo</Name>
     </ProjectReference>

@@ -7,8 +7,8 @@
     <ProjectGuid>{DDF7AA4D-770A-4F91-944D-A741D3279D67}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Payoneer.Infra.Repo</RootNamespace>
-    <AssemblyName>Payoneer.Infra.Repo</AssemblyName>
+    <RootNamespace>Payoneer.Infra.RedisRepo</RootNamespace>
+    <AssemblyName>Payoneer.Infra.RedisRepo</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
