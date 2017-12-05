@@ -4,19 +4,19 @@ using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StackExchange.Redis;
 
-namespace Payoneer.Infra.Repo.IntegrationTests
+namespace Payoneer.Infra.RedisRepo.IntegrationTests
 {
     public abstract class RedisTests
     {
         // ReSharper disable once InconsistentNaming
-        protected RedisTestContext redisContext;
+        protected IRedisContext redisContext;
 
         #region Initialization
 
         // ReSharper disable once UnusedAutoPropertyAccessor.Global
         public TestContext TestContext { get; set; }
 
-        protected static void ClearDb(RedisContext redisContext, TestContext testContext)
+        protected static void ClearDb(IRedisContext redisContext, TestContext testContext)
         {
             var keys = RedisTestContext.Retry(() => redisContext.GetKeys(testContext.TestName + '*'), 5);
             redisContext.Delete(keys.ToArray());

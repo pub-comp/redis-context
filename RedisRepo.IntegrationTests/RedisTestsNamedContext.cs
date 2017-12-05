@@ -1,6 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Payoneer.Infra.Repo.IntegrationTests
+namespace Payoneer.Infra.RedisRepo.IntegrationTests
 {
     [TestClass]
     public class RedisTestsNamedContext : RedisTests
@@ -18,7 +18,7 @@ namespace Payoneer.Infra.Repo.IntegrationTests
         [TestCleanup]
         public void TestCleanup()
         {
-            redisContext?.Connection?.Dispose();
+            (redisContext as RedisTestContext)?.Connection?.Dispose();
         }
     }
 }

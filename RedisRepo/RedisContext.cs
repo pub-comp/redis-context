@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using StackExchange.Redis;
 using NLog;
+using StackExchange.Redis;
 
-namespace Payoneer.Infra.Repo
+namespace Payoneer.Infra.RedisRepo
 {
     public class RedisContext : IRedisContext
     {
