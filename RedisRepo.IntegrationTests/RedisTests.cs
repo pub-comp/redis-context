@@ -32,14 +32,14 @@ namespace Payoneer.Infra.RedisRepo.IntegrationTests
 
             public new IDatabase Database => base.Database;
 
-            public new static TResult Retry<TResult>(Func<TResult> func, int maxAttempts)
+            public static TResult Retry<TResult>(Func<TResult> func, int maxAttempts)
             {
-                return RedisContext.Retry(func, maxAttempts);
+                return RetryUtil.Retry(func, maxAttempts);
             }
 
-            public new static void Retry(Action action, int maxAttempts)
+            public static void Retry(Action action, int maxAttempts)
             {
-                RedisContext.Retry(action, maxAttempts);
+                RetryUtil.Retry(action, maxAttempts);
             }
         }
 

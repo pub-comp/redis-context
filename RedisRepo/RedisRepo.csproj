@@ -45,9 +45,15 @@
     <Compile Include="..\VersionInfo.cs">
       <Link>Properties\VersionInfo.cs</Link>
     </Compile>
+    <Compile Include="Enums\SetOPerationAggregations.cs" />
+    <Compile Include="Enums\SortOrders.cs" />
     <Compile Include="IRedisContext.cs" />
     <Compile Include="RedisContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RedisValueExtensions.cs" />
+    <Compile Include="Enums\SetOperations.cs" />
+    <Compile Include="RetryUtil.cs" />
+    <Compile Include="TransactionalRedisContext.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -55,5 +61,6 @@
   <ItemGroup>
     <None Include="NuGetPack.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

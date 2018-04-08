@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Payoneer.Infra.RedisRepo
 {
-    public interface IRedisContext
+    public interface IRedisContext : IDisposable
     {
         bool AtomicExchange(string key, bool value);
         bool? AtomicExchange(string key, bool? value);
