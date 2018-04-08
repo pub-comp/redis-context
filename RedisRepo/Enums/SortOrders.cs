@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Payoneer.Infra.RedisRepo.Enums
+namespace PubComp.RedisRepo.Enums
 {
     public enum SortOrders { Ascending, Descending }
 

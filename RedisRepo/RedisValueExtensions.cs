@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Payoneer.Infra.RedisRepo
+namespace PubComp.RedisRepo
 {
     public static class RedisValueExtensions
     {

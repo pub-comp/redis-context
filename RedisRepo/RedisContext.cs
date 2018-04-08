@@ -5,7 +5,7 @@ using System.Threading;
 using NLog;
 using StackExchange.Redis;
 
-namespace Payoneer.Infra.RedisRepo
+namespace PubComp.RedisRepo
 {
     public class RedisContext : IRedisContext
     {

@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Payoneer.Infra.RedisRepo.IntegrationTests
+namespace PubComp.RedisRepo.IntegrationTests
 {
     [TestClass]
     public class TransactionalRedisContextTests

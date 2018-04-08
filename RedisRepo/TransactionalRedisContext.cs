@@ -1,11 +1,11 @@
-﻿using Payoneer.Infra.RedisRepo.Enums;
+﻿using PubComp.RedisRepo.Enums;
 using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Payoneer.Infra.RedisRepo
+namespace PubComp.RedisRepo
 {
     public class TransactionalRedisContext
     {

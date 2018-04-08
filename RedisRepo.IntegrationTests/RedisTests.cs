@@ -4,7 +4,7 @@ using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StackExchange.Redis;
 
-namespace Payoneer.Infra.RedisRepo.IntegrationTests
+namespace PubComp.RedisRepo.IntegrationTests
 {
     public abstract class RedisTests
     {

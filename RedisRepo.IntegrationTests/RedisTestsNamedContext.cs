@@ -1,6 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Payoneer.Infra.RedisRepo.IntegrationTests
+namespace PubComp.RedisRepo.IntegrationTests
 {
     [TestClass]
     public class RedisTestsNamedContext : RedisTests

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Payoneer.Infra.RedisRepo
+namespace PubComp.RedisRepo
 {
     public interface IRedisContext : IDisposable
     {
