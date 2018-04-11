@@ -4,6 +4,6 @@ using System.Reflection;
 [assembly: AssemblyVersion("1.0.5")]
 [assembly: AssemblyFileVersion("1.0.5")]
 [assembly: AssemblyInformationalVersion("1.0.5")]
-[assembly: AssemblyCompany("Payoneer")]
+[assembly: AssemblyCompany("PubComp")]
 [assembly: AssemblyProduct("Redis Repository")]
-[assembly: AssemblyCopyright("Copyright © 2017")]
+[assembly: AssemblyCopyright("Copyright © 2018")]
