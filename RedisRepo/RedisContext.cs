@@ -564,19 +564,15 @@ namespace PubComp.RedisRepo
 
         #endregion
 
-        #region IDisposable
-        public void Dispose()
+        
+        public void CloseConnections()
         {
-            if (this.connections != null)
+            if (this.connections == null) return;
+
+            foreach (var conn in this.connections)
             {
-                foreach (var conn in this.connections)
-                {
-                    conn?.Dispose();
-                }
+                conn?.Dispose();
             }
         }
-
-        #endregion
-
     }
 }

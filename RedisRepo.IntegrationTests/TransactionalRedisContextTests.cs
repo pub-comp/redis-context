@@ -13,12 +13,12 @@ namespace PubComp.RedisRepo.IntegrationTests
     [TestClass]
     public class TransactionalRedisContextTests
     {
-        string ns = "n1";
-        string host = "localhost";
-        int port = 6379;
-        string password = null;
-        int dbId = 10;
-        Random random = new Random();
+        readonly string ns = "n1";
+        readonly string host = "localhost";
+        readonly int port = 6379;
+        readonly string password = null;
+        readonly int dbId = 10;
+        readonly Random random = new Random();
 
         public TestContext TestContext { get; set; }
 
@@ -60,7 +60,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void TestGetAndSetSameTransactionBool()
         {
             // bool
-            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetBool(key), 2, 1, true, true).GetAwaiter().GetResult();
+            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetBool(key), 2, true, true).GetAwaiter().GetResult();
         }
 
         [TestMethod]
@@ -70,7 +70,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         {
 
             // nullable bool - with value
-            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetNullableBoolean(key), 2, 1, (bool?)true, true).GetAwaiter().GetResult();
+            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetNullableBoolean(key), 2, (bool?)true, true).GetAwaiter().GetResult();
         }
 
         [TestMethod]
@@ -79,7 +79,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void TestGetAndSetSameTransactioNullableBool2()
         {
             // nullable bool - no value
-            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetNullableBoolean(key), 2, 1, (bool?)null, null)
+            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetNullableBoolean(key), 2, (bool?)null, null)
                 .GetAwaiter().GetResult();
         }
 
@@ -89,7 +89,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void TestGetAndSetSameTransactionString()
         {
             // string
-            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetString(key), 2, 1, "foobar", "foobar")
+            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetString(key), 2, "foobar", "foobar")
                 .GetAwaiter().GetResult();
         }
 
@@ -99,7 +99,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void TestGetAndSetSameTransactionInt()
         {
             // int
-            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetInt(key), 2, 1, 444, 444)
+            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetInt(key), 2, 444, 444)
                 .GetAwaiter().GetResult();
         }
 
@@ -110,7 +110,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void TestGetAndSetSameTransactionNullableInt()
         {
             // nullable int
-            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetNullableInt(key), 2, 1, (int?)444, 444)
+            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetNullableInt(key), 2, (int?)444, 444)
                 .GetAwaiter().GetResult();
         }
 
@@ -120,7 +120,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void TestGetAndSetSameTransactionLong()
         {
             // longmul
-            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetLong(key), 2, 1, 444L, 444)
+            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetLong(key), 2, 444L, 444)
                 .GetAwaiter().GetResult();
         }
 
@@ -130,7 +130,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void TestGetAndSetSameTransactionNullableLong()
         {
             // nullable int
-            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetNullableLong(key), 2, 1, (long?)444, 444)
+            TestGetAndSetSameTransaction((ctx, key, val) => ctx.Set(key, val), (ctx, key) => ctx.GetNullableLong(key), 2, (long?)444, 444)
                 .GetAwaiter().GetResult();
         }
 
@@ -138,11 +138,10 @@ namespace PubComp.RedisRepo.IntegrationTests
             Action<TransactionalRedisContext, string, T> set,
             Action<TransactionalRedisContext, string> get,
             int expectedResultsCount,
-            int assertResultIndex,
             T setValue,
             T expectedValue)
         {
-            RedisContext ctx = GetTestConnection();
+            var ctx = GetTestConnection();
             var key = GenerateRandomKey();
 
             var transactionCtx = TransactionalRedisContext.FromRedisContext(ctx);
@@ -156,11 +155,12 @@ namespace PubComp.RedisRepo.IntegrationTests
             Assert.AreEqual(expectedResultsCount, results.Length);
             var t = results[1] as Task<T>;
 
+            Assert.IsNotNull(t);
             var actual = await t;
 
             Assert.AreEqual(expectedValue, actual);
 
-            ctx?.Dispose();
+            ctx?.CloseConnections();
         }
         #endregion
 
@@ -172,7 +172,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SortedSetAddGetInt()
         {
             SortedSetAddGet(
-                new int[] { 12, 13, 14 },
+                new [] { 12, 13, 14 },
                 (tx, key, val, score) => tx.SortedSetAdd(key, val, score),
                 (tx, key, start) => tx.SortedSetGetRangeByRankInt(key, rangeStart: start));
         }
@@ -183,7 +183,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SortedSetAddGetBool()
         {
             SortedSetAddGet(
-                new bool[] { true, false },
+                new [] { true, false },
                 (tx, key, val, score) => tx.SortedSetAdd(key, val, score),
                 (tx, key, start) => tx.SortedSetGetRangeByRankBool(key, rangeStart: start));
         }
@@ -195,7 +195,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SortedSetAddGetDouble()
         {
             SortedSetAddGet(
-                new double[] { 0.145, 1.778, 4444.4, 321.000001 },
+                new [] { 0.145, 1.778, 4444.4, 321.000001 },
                 (tx, key, val, score) => tx.SortedSetAdd(key, val, score),
                 (tx, key, start) => tx.SortedSetGetRangeByRankDouble(key, rangeStart: start));
         }
@@ -207,7 +207,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SortedSetAddGetString()
         {
             SortedSetAddGet(
-                new string[] { "ba", "ma", " ", '\t'.ToString() },
+                new [] { "ba", "ma", " ", '\t'.ToString() },
                 (tx, key, val, score) => tx.SortedSetAdd(key, val, score),
                 (tx, key, start) => tx.SortedSetGetRangeByRankString(key, rangeStart: start));
         }
@@ -230,23 +230,24 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SortedSetAddGetLong()
         {
             SortedSetAddGet(
-                new long[] { 4444, 33332, 12314, 1, 0 },
+                new [] { 4444L, 33332, 12314, 1, 0 },
                 (tx, key, val, score) => tx.SortedSetAdd(key, val, score),
                 (tx, key, start) => tx.SortedSetGetRangeByRankLong(key, rangeStart: start));
         }
 
 
         public void SortedSetAddGet<T>(
-            IEnumerable<T> vals, Action<TransactionalRedisContext, string, T, double> sortedSetAdd,
+            T[] vals, Action<TransactionalRedisContext, string, T, double> sortedSetAdd,
             Action<TransactionalRedisContext, string, int> getRange)
         {
             var key = GenerateRandomKey();
-            var valsCount = vals.Count();
-            using (var conn = GetTestConnection())
+            var valsCount = vals.Length;
+            var conn = GetTestConnection();
+            try
             {
                 var txCtx = TransactionalRedisContext.FromRedisContext(conn);
                 txCtx.Start();
-                int i = 0;
+                var i = 0;
                 foreach (var val in vals)
                 {
                     sortedSetAdd(txCtx, key, val, i);
@@ -258,14 +259,14 @@ namespace PubComp.RedisRepo.IntegrationTests
                 Task.WaitAll(addResults);
 
                 txCtx.Start();
-                for (int rangeIndex = 0; rangeIndex < valsCount; rangeIndex++)
+                for (var rangeIndex = 0; rangeIndex < valsCount; rangeIndex++)
                 {
                     getRange(txCtx, key, rangeIndex);
 
                 }
 
                 var results = txCtx.ExecuteAndWaitTyped<T[]>();
-                
+
                 i = 0;
                 while (valsCount > 0)
                 {
@@ -273,6 +274,10 @@ namespace PubComp.RedisRepo.IntegrationTests
                     Assert.AreEqual(valsCount + 1, results[i].Length);
                     i++;
                 }
+            }
+            finally
+            {
+                conn.CloseConnections();
             }
         }
 
@@ -285,7 +290,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SortedSetGetbyScoreInt()
         {
             SortedSetGetByScoreTest(
-                new Tuple<int, double>[]
+                new []
                 {
                     new Tuple<int, double>(10, 10),
                     new Tuple<int, double>(20, 20),
@@ -293,9 +298,9 @@ namespace PubComp.RedisRepo.IntegrationTests
                 },
                 new Dictionary<double, int[]>
                 {
-                    [8] = new int[] { 10, 20, 30 },
-                    [17] = new int[] { 20, 30 },
-                    [26] = new int[] { 30 },
+                    [8] = new [] { 10, 20, 30 },
+                    [17] = new [] { 20, 30 },
+                    [26] = new [] { 30 },
                 },
                 (tx, key, value, score) => tx.SortedSetAdd(key, value, score),
                 (tx, key, startScore) => tx.SortedSetGetRangeByScoreInt(key, start: startScore));
@@ -306,7 +311,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SortedSetGetbyScoreString()
         {
             SortedSetGetByScoreTest(
-                new Tuple<string, double>[]
+                new []
                 {
                     new Tuple<string, double>("a", 10),
                     new Tuple<string, double>("b", 20),
@@ -314,9 +319,9 @@ namespace PubComp.RedisRepo.IntegrationTests
                 },
                 new Dictionary<double, string[]>
                 {
-                    [10] = new string[] { "a", "b", "ccc" },
-                    [20] = new string[] { "b", "ccc" },
-                    [30] = new string[] { "ccc" },
+                    [10] = new [] { "a", "b", "ccc" },
+                    [20] = new [] { "b", "ccc" },
+                    [30] = new [] { "ccc" },
                 },
                 (tx, key, value, score) => tx.SortedSetAdd(key, value, score),
                 (tx, key, startScore) => tx.SortedSetGetRangeByScoreString(key, start: startScore));
@@ -327,7 +332,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SortedSetGetbyScoreDouble()
         {
             SortedSetGetByScoreTest(
-                new Tuple<double, double>[]
+                new []
                 {
                     new Tuple<double, double>(1, 10),
                     new Tuple<double, double>(2.5, 20),
@@ -335,9 +340,9 @@ namespace PubComp.RedisRepo.IntegrationTests
                 },
                 new Dictionary<double, double[]>
                 {
-                    [10] = new double[] { 1, 2.5, 33.333 },
-                    [20] = new double[] { 2.5, 33.333 },
-                    [30] = new double[] { 33.333 },
+                    [10] = new [] { 1, 2.5, 33.333 },
+                    [20] = new [] { 2.5, 33.333 },
+                    [30] = new [] { 33.333 },
                 },
                 (tx, key, value, score) => tx.SortedSetAdd(key, value, score),
                 (tx, key, startScore) => tx.SortedSetGetRangeByScoreDouble(key, start: startScore));
@@ -348,15 +353,15 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SortedSetGetbyScoreBool()
         {
             SortedSetGetByScoreTest(
-                new Tuple<bool, double>[]
+                new []
                 {
                     new Tuple<bool, double>(false, 10),
                     new Tuple<bool, double>(true, 20),
                 },
                 new Dictionary<double, bool[]>
                 {
-                    [10] = new bool[] { false, true },
-                    [20] = new bool[] { true }
+                    [10] = new [] { false, true },
+                    [20] = new [] { true }
                 },
                 (tx, key, value, score) => tx.SortedSetAdd(key, value, score),
                 (tx, key, startScore) => tx.SortedSetGetRangeByScoreBool(key, start: startScore));
@@ -367,7 +372,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SortedSetGetbyScoreLong()
         {
             SortedSetGetByScoreTest(
-                new Tuple<long, double>[]
+                new []
                 {
                     new Tuple<long, double>(1010, 10),
                     new Tuple<long, double>(2020, 20),
@@ -376,24 +381,24 @@ namespace PubComp.RedisRepo.IntegrationTests
                 },
                 new Dictionary<double, long[]>
                 {
-                    [8] = new long[] { 1010, 2020, 3030, 4040 },
-                    [18] = new long[] { 2020, 3030, 4040 },
-                    [26] = new long[] { 3030, 4040 },
-                    [34] = new long[] { 4040 },
+                    [8] = new [] { 1010L, 2020, 3030, 4040 },
+                    [18] = new [] { 2020L, 3030, 4040 },
+                    [26] = new [] { 3030L, 4040 },
+                    [34] = new [] { 4040L },
                 },
                 (tx, key, value, score) => tx.SortedSetAdd(key, value, score),
                 (tx, key, startScore) => tx.SortedSetGetRangeByScoreLong(key, start: startScore));
         }
 
         public void SortedSetGetByScoreTest<T>(
-            IEnumerable<Tuple<T, double>> valswithScores,
+            Tuple<T, double>[] valswithScores,
             Dictionary<double, T[]> expectedResultsPerScore,
             Action<TransactionalRedisContext, string, T, double> sortedSetAdd,
             Action<TransactionalRedisContext, string, double> getByScore)
         {
             var key = GenerateRandomKey();
-            var valsCount = valswithScores.Count();
-            using (var conn = GetTestConnection())
+            var conn = GetTestConnection();
+            try
             {
                 var txCtx = TransactionalRedisContext.FromRedisContext(conn);
                 txCtx.Start();
@@ -414,16 +419,20 @@ namespace PubComp.RedisRepo.IntegrationTests
                 var results = txCtx.ExecuteAndWaitTyped<T[]>();
 
                 Assert.AreEqual(expectedResultsPerScore.Count, results.Length);
-                int i = 0;
+                var i = 0;
                 foreach (var expected in expectedResultsPerScore)
                 {
-                    for (int j = 0; j < results[i].Length; j++)
+                    for (var j = 0; j < results[i].Length; j++)
                     {
                         Assert.AreEqual(expected.Value[j], results[i][j]);
                     }
 
                     i++;
                 }
+            }
+            finally
+            {
+                conn.CloseConnections();
             }
         }
         #endregion
@@ -435,7 +444,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SortedSetRemoveRangeByScoreLong()
         {
             SortedSetRemoveRangeByScoreTest(
-                new Tuple<long, double>[]
+                new []
                 {
                     new Tuple<long, double>(1010, 10),
                     new Tuple<long, double>(2020, 20),
@@ -444,10 +453,10 @@ namespace PubComp.RedisRepo.IntegrationTests
                 },
                 new Dictionary<double, long[]>
                 {
-                    [8] = new long[]  { 2020, 3030, 4040 },
-                    [18] = new long[] { 2020, 3030, 4040 },
-                    [26] = new long[] { 3030, 4040 },
-                    [34] = new long[] { 4040 },
+                    [8] = new []  { 2020L, 3030, 4040 },
+                    [18] = new [] { 2020L, 3030, 4040 },
+                    [26] = new [] { 3030L, 4040 },
+                    [34] = new [] { 4040L },
                 },
                 5d, 12d,
                 (tx, key, value, score) => tx.SortedSetAdd(key, value, score),
@@ -460,7 +469,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SortedSetRemoveRangeByScoreString()
         {
             SortedSetRemoveRangeByScoreTest(
-                new Tuple<string, double>[]
+                new []
                 {
                     new Tuple<string, double>("ba", 10),
                     new Tuple<string, double>("ma", 20),
@@ -469,10 +478,10 @@ namespace PubComp.RedisRepo.IntegrationTests
                 },
                 new Dictionary<double, string[]>
                 {
-                    [8] = new  string[] { "ma", "psycho", "logist" },
-                    [18] = new string[] { "ma", "psycho", "logist" },
-                    [26] = new string[] { "psycho", "logist" },
-                    [34] = new string[] { "logist" },
+                    [8] = new  [] { "ma", "psycho", "logist" },
+                    [18] = new [] { "ma", "psycho", "logist" },
+                    [26] = new [] { "psycho", "logist" },
+                    [34] = new [] { "logist" },
                 },
                 5d, 12d,
                 (tx, key, value, score) => tx.SortedSetAdd(key, value, score),
@@ -480,15 +489,15 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
 
         public void SortedSetRemoveRangeByScoreTest<T>(
-            IEnumerable<Tuple<T, double>> valswithScores,
+            Tuple<T, double>[] valswithScores,
             Dictionary<double, T[]> expectedResultsPerScore,
             double startScore, double stopScore,
             Action<TransactionalRedisContext, string, T, double> sortedSetAdd,
             Action<TransactionalRedisContext, string, double> getByScore)
         {
             var key = GenerateRandomKey();
-            var valsCount = valswithScores.Count();
-            using (var conn = GetTestConnection())
+            var conn = GetTestConnection();
+            try
             {
                 var txCtx = TransactionalRedisContext.FromRedisContext(conn);
                 txCtx.Start();
@@ -513,16 +522,20 @@ namespace PubComp.RedisRepo.IntegrationTests
                 var castedResults = txCtx.ExecuteAndWaitTyped<T[]>();
 
                 Assert.AreEqual(expectedResultsPerScore.Count, castedResults.Length);
-                int i = 0;
+                var i = 0;
                 foreach (var expected in expectedResultsPerScore)
                 {
-                    for (int j = 0; j < castedResults[i].Length; j++)
+                    for (var j = 0; j < castedResults[i].Length; j++)
                     {
                         Assert.AreEqual(expected.Value[j], castedResults[i][j]);
                     }
 
                     i++;
                 }
+            }
+            finally
+            {
+                conn.CloseConnections();
             }
         }
         #endregion
@@ -535,11 +548,11 @@ namespace PubComp.RedisRepo.IntegrationTests
         public void SlidingWindowTest()
         {
             var key = GenerateRandomKey();
-            var valuesCount = 15;
-            var waitInEachIterationSeconds = 1;
-            var slidingWindowSizeMS = 5000;
+            const int valuesCount = 15;
+            const int waitInEachIterationSeconds = 1;
+            const int slidingWindowSizeMS = 5000;
 
-            var expectedResultsByTimePassed = new Dictionary<int, int>()
+            var expectedResultsByTimePassed = new Dictionary<int, int>
             {
                 [1] = 11,  [2] = 23,   [3] = 36,   [4] = 50,   [5] = 65,
                 [6] = 70,  [7] = 75,   [8] = 80,   [9] = 85,   [10] = 90,
@@ -548,14 +561,15 @@ namespace PubComp.RedisRepo.IntegrationTests
 
             var baseline = DateTime.UtcNow;
 
-            using (var conn = GetTestConnection())
+            var conn = GetTestConnection();
+            try
             {
                 var txCtx = TransactionalRedisContext.FromRedisContext(conn);
-                for (int i = 1; i <= valuesCount; i++)
+                for (var i = 1; i <= valuesCount; i++)
                 {
                     var sw = Stopwatch.StartNew();
                     txCtx.Start();
-                    int resultsIindex = 1;
+                    var resultsIindex = 1;
                     var currentIterationScore = (DateTime.UtcNow - baseline).TotalSeconds * 1000;
                     var calculatedRangeEnd = currentIterationScore - slidingWindowSizeMS;
                     var removeRangeEnd = Math.Max(calculatedRangeEnd, 0);
@@ -583,17 +597,23 @@ namespace PubComp.RedisRepo.IntegrationTests
                     Task.WaitAll(resultsTasks);
 
                     // only the second\third command is interesting for us - getting all of the values in the current window
-                    var windowContent = (resultsTasks[resultsIindex] as Task<int[]>).Result;
+                    var convertedTask = resultsTasks[resultsIindex] as Task<int[]>;
+                    Assert.IsNotNull(convertedTask);
+                    var windowContent = convertedTask.Result;
 
                     var sum = windowContent.Sum();
-                    Console.WriteLine($"checking results. iteration: {i}, expected: {expectedResultsByTimePassed[i]}, actual: {sum}");
+                    Console.WriteLine(
+                        $"checking results. iteration: {i}, expected: {expectedResultsByTimePassed[i]}, actual: {sum}");
                     Assert.AreEqual(expectedResultsByTimePassed[i], sum);
 
                     sw.Stop();
 
-                    Thread.Sleep((waitInEachIterationSeconds * 1000) - (int)sw.ElapsedMilliseconds);
+                    Thread.Sleep((waitInEachIterationSeconds * 1000) - (int) sw.ElapsedMilliseconds);
                 }
-                
+            }
+            finally
+            {
+                conn.CloseConnections();
             }
         }
         #endregion

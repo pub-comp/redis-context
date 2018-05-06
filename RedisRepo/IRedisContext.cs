@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace PubComp.RedisRepo
 {
-    public interface IRedisContext : IDisposable
+    public interface IRedisContext
     {
         bool AtomicExchange(string key, bool value);
         bool? AtomicExchange(string key, bool? value);
