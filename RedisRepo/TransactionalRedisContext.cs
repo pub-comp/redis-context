@@ -467,6 +467,16 @@ namespace PubComp.RedisRepo
             Record(this.contextTransaction.SortedSetAddAsync(Key(key), value, score, flags: commandFlags));
         }
 
+        public void SortedSetAdd(string key, byte[] value, double score)
+        {
+            if (value == null)
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+
+            Record(this.contextTransaction.SortedSetAddAsync(Key(key), value, score, flags: commandFlags));
+        }
+
         public void SortedSetAdd(string key, bool value, double score)
         {
             var intValue = value ? -1 : 0;
@@ -555,6 +565,12 @@ namespace PubComp.RedisRepo
         {
             var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToRedisOrder(), flags: commandFlags);
             Record(t.ContinueWith((sse) => sse.Result.Select((s) => s.Element.ToBoolDefault()).ToArray()));
+        }
+
+        public void SortedSetGetRangeByRankByteArray(string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        {
+            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToRedisOrder(), flags: commandFlags);
+            Record(t.ContinueWith((sse) => sse.Result.Select((s) => (byte[])s.Element).ToArray()));
         }
 
 
