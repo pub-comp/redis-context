@@ -188,6 +188,17 @@ namespace PubComp.RedisRepo.IntegrationTests
                 (tx, key, start) => tx.SortedSetGetRangeByRankBool(key, rangeStart: start));
         }
 
+        [TestMethod]
+        [TestCategory("Transactional")]
+        [TestCategory("Sorted Set get-set")]
+        public void SortedSetAddGetByteArray()
+        {
+            SortedSetAddGet(
+                new[] { new byte[] {1,2,3}, new byte[]{ 4, 5, 6 } },
+                (tx, key, val, score) => tx.SortedSetAdd(key, val, score),
+                (tx, key, start) => tx.SortedSetGetRangeByRankByteArray(key, rangeStart: start));
+        }
+
 
         [TestMethod]
         [TestCategory("Transactional")]
