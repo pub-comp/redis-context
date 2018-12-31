@@ -1,6 +1,8 @@
 ﻿using System;
 using System.CodeDom.Compiler;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.ServiceModel.Channels;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -20,6 +22,8 @@ namespace PubComp.RedisRepo.IntegrationTests
 
         protected static void ClearDb(IRedisContext redisContext, TestContext testContext)
         {
+            var concreteContext = (RedisTestContext) redisContext;
+            Assert.IsTrue(concreteContext.IsLocal);
             var keys = RedisTestContext.Retry(() => redisContext.GetKeys("*"), 5);
             redisContext.Delete(keys.ToArray());
         }
@@ -31,6 +35,29 @@ namespace PubComp.RedisRepo.IntegrationTests
             }
 
             public new IConnectionMultiplexer Connection => base.Connection;
+
+            public bool IsLocal
+            {
+                get
+                {
+                    var endpoints = base.Connection.GetEndPoints();
+                    Assert.IsNotNull(endpoints);
+                    Assert.AreEqual(1, endpoints.Length);
+
+                    switch (endpoints[0])
+                    {
+                        case DnsEndPoint dns:
+                            return dns.Host.ToLower() == "localhost";
+                        case IPEndPoint ip:
+                        {
+                            var ipBytes = ip.Address.GetAddressBytes();
+                            return ipBytes[0] == 127 && ipBytes[1] == 0 && ipBytes[2] == 0 && ipBytes[3] == 1;
+                        }
+                        default:
+                            return false;
+                    }
+                }
+            }
 
             public new IDatabase Database => base.Database;
 
@@ -431,7 +458,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
 
         [TestMethod]
-        public void TestCountTestMembers()
+        public void TestCountSetMembers()
         {
             const string key = "k2";
             var values = new[] { "bar", "bar", "a", "b", "c", "a", "b" };
@@ -454,7 +481,7 @@ namespace PubComp.RedisRepo.IntegrationTests
             redisContext.AddToSet(key2, values2);
 
             var results = redisContext.GetSetsDifference(new[] {key1, key2});
-            AssertArraysRepresentSameSet(new [] {"c","d", "e"}, results);
+            CollectionAssert.AreEquivalent(new [] {"c","d", "e"}, results);
         }
 
         [TestMethod]
@@ -470,7 +497,7 @@ namespace PubComp.RedisRepo.IntegrationTests
             redisContext.AddToSet(key2, values2);
 
             var results = redisContext.UnionSets(new[] { key1, key2 });
-            AssertArraysRepresentSameSet(new[] { "a", "b", "c" }, results);
+            CollectionAssert.AreEquivalent(new[] { "a", "b", "c" }, results);
         }
 
         [TestMethod]
@@ -486,24 +513,13 @@ namespace PubComp.RedisRepo.IntegrationTests
             redisContext.AddToSet(key2, values2);
 
             var results = redisContext.IntersectSets(new[] { key1, key2 });
-            AssertArraysRepresentSameSet(new[] { "a" }, results);
+            CollectionAssert.AreEquivalent(new[] { "a" }, results);
         }
 
         private void ValidateSetResults(string key, string[] expected)
         {
             var valuesFromRedis = redisContext.GetSetMembers(key);
-            AssertArraysRepresentSameSet(expected, valuesFromRedis);
-        }
-
-        private static void AssertArraysRepresentSameSet(string[] expected, string[] valuesFromRedis)
-        {
-            Assert.IsNotNull(valuesFromRedis);
-            foreach (var e in expected)
-            {
-                Assert.IsTrue(valuesFromRedis.Contains(e));
-            }
-
-            Assert.AreEqual(expected.Length, valuesFromRedis.Length);
+            CollectionAssert.AreEquivalent(expected, valuesFromRedis);
         }
 
         #endregion
