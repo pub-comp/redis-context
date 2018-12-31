@@ -42,5 +42,52 @@ namespace PubComp.RedisRepo
         bool TryGet(string key, out long value);
         bool TryGet(string key, out long? value);
         bool TryGet(string key, out string value);
+
+        #region Redis Sets
+
+        void AddToSet(string key, string[] values);
+
+        long CountSetMembers(string key);
+
+        string[] GetSetMembers(string key);
+
+        /// <summary>
+        /// Get the diff between the set at index 0 of <paramref name="keys"/> and all other sets in <paramref name="keys"/>
+        /// </summary>
+        string[] GetSetsDifference(string[] keys);
+
+        /// <summary>
+        /// Union sets at keys <paramref name="setKeys"/>
+        /// </summary>
+        string[] UnionSets(string[] keys);
+
+        /// <summary>
+        /// Intersect sets at keys <paramref name="keys"/>
+        /// </summary>
+        string[] IntersectSets(string[] keys);
+
+        /// <summary>
+        /// Get the diff between the set at index 0 of <paramref name="keys"/> and all other sets in <paramref name="keys"/>
+        /// store the result at <param name="destinationKey"></param>
+        /// </summary>
+        void StoreSetsDifference(string destinationKey, string[] keys);
+
+        /// <summary>
+        /// Union sets at keys <paramref name="keys"/>
+        /// store the result at <param name="destinationKey"></param>
+        /// </summary>
+        void UnionSetsAndStore(string destinationKey, string[] keys);
+
+        /// <summary>
+        /// Intersect sets at keys <paramref name="keys"/>
+        /// store the result at <param name="destinationKey"></param>
+        /// </summary>
+        void IntersectSetsAndStore(string destinationKey, string[] keys);
+
+        bool SetContains(string key, string member);
+
+
+
+        #endregion
     }
 }

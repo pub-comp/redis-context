@@ -12,7 +12,7 @@ namespace PubComp.RedisRepo
         private const int DefaultTotalConnections = 2;
 
         private readonly string contextNamespace;
-        
+
         private readonly int databaseNumber;
         private readonly List<string> hosts;
         private readonly ILogger log;
@@ -86,7 +86,7 @@ namespace PubComp.RedisRepo
             this.connections = new IConnectionMultiplexer[this.totalConnections];
             for (int i = 0; i < totalConnections; i++)
             {
-               this.connections[i]  = ConnectionMultiplexer.Connect(options.RedisConfigurationOptions);
+                this.connections[i] = ConnectionMultiplexer.Connect(options.RedisConfigurationOptions);
                 this.connections[i].PreserveAsyncOrder = false;
             }
         }
@@ -270,7 +270,7 @@ namespace PubComp.RedisRepo
                 ? string.Concat("ns=", contextNamespace, ":k=", key)
                 : key;
         }
-        
+
         #region TryGet
 
         public bool TryGet(string key, out string value)
@@ -424,6 +424,110 @@ namespace PubComp.RedisRepo
 
         #endregion
 
+        #region Redis Sets
+        public void AddToSet(string key, string[] values)
+        {
+            Retry(() => this.Database.SetAdd(Key(key), values.ToRedisValueArray(), flags: commandFlags), defaultRetries);
+        }
+
+        public long CountSetMembers(string key)
+        {
+            return Retry(() => this.Database.SetLength(Key(key), flags: commandFlags), defaultRetries);
+        }
+
+        public string[] GetSetMembers(string key)
+        {
+            var results = Retry(() => this.Database.SetMembers(Key(key), flags: commandFlags), defaultRetries);
+            return results.ToStringArray();
+        }
+
+        /// <summary>
+        /// Get the diff between the set at index 0 of <paramref name="keys"/> and all other sets in <paramref name="keys"/>
+        /// </summary>
+        public string[] GetSetsDifference(string[] keys)
+        {
+            return OperateOnSet(
+                SetOperation.Difference,
+                keys);
+        }
+
+        /// <summary>
+        /// Union sets at keys <paramref name="setKeys"/>
+        /// </summary>
+        public string[] UnionSets(string[] keys)
+        {
+            return OperateOnSet(SetOperation.Union, keys);
+        }
+
+        /// <summary>
+        /// Intersect sets at keys <paramref name="keys"/>
+        /// </summary>
+        public string[] IntersectSets(string[] keys)
+        {
+            return OperateOnSet(SetOperation.Intersect, keys);
+        }
+
+        /// <summary>
+        /// Get the diff between the set at index 0 of <paramref name="keys"/> and all other sets in <paramref name="keys"/>
+        /// store the result at <param name="destinationKey"></param>
+        /// </summary>
+        public void StoreSetsDifference(string destinationKey, string[] keys)
+        {
+            OperateOnSetAndStore(
+                SetOperation.Difference,
+                destinationKey,
+                keys);
+        }
+
+        /// <summary>
+        /// Union sets at keys <paramref name="keys"/>
+        /// store the result at <param name="destinationKey"></param>
+        /// </summary>
+        public void UnionSetsAndStore(string destinationKey, string[] keys)
+        {
+            OperateOnSetAndStore(SetOperation.Union, destinationKey, keys);
+        }
+
+        /// <summary>
+        /// Intersect sets at keys <paramref name="keys"/>
+        /// store the result at <param name="destinationKey"></param>
+        /// </summary>
+        public void IntersectSetsAndStore(string destinationKey, string[] keys)
+        {
+            OperateOnSetAndStore(SetOperation.Intersect, destinationKey, keys);
+        }
+
+        public bool SetContains(string key, string member)
+        {
+            return Retry(() => this.Database.SetContains(key, member, commandFlags), defaultRetries);
+        }
+
+        #region set helpers
+        private string[] OperateOnSet(SetOperation op, string[] keys)
+        {
+            if (keys == null || keys.Length == 0) return null;
+
+            var redisKeys = keys.Select(c => (RedisKey)Key(c)).ToArray();
+            var results =
+                 Retry(() => this.Database.SetCombine(op, redisKeys, commandFlags), defaultRetries);
+
+            return results?.ToStringArray();
+        }
+
+        private void OperateOnSetAndStore(SetOperation op, string destinationKey, string[] keys)
+        {
+            if (keys == null || keys.Length == 0)
+                return;
+
+            var redisKeys = keys.Select(c => (RedisKey)Key(c)).ToArray();
+
+            Retry(() => this.Database.SetCombineAndStore(op, Key(destinationKey), redisKeys, commandFlags), defaultRetries);
+
+        } 
+        #endregion
+
+        #endregion
+
         #region Increment
 
         public long Increment(string key, long value)
@@ -564,7 +668,7 @@ namespace PubComp.RedisRepo
 
         #endregion
 
-        
+
         public void CloseConnections()
         {
             if (this.connections == null) return;

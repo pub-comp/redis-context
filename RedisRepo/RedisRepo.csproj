@@ -82,6 +82,7 @@
     </Compile>
     <Compile Include="Enums\SetOPerationAggregations.cs" />
     <Compile Include="Enums\SortOrders.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="IRedisContext.cs" />
     <Compile Include="RedisContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
