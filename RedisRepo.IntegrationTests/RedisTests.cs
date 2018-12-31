@@ -1,5 +1,7 @@
 ﻿using System;
+using System.CodeDom.Compiler;
 using System.Linq;
+using System.ServiceModel.Channels;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StackExchange.Redis;
@@ -18,7 +20,7 @@ namespace PubComp.RedisRepo.IntegrationTests
 
         protected static void ClearDb(IRedisContext redisContext, TestContext testContext)
         {
-            var keys = RedisTestContext.Retry(() => redisContext.GetKeys(testContext.TestName + '*'), 5);
+            var keys = RedisTestContext.Retry(() => redisContext.GetKeys("*"), 5);
             redisContext.Delete(keys.ToArray());
         }
 
@@ -147,7 +149,7 @@ namespace PubComp.RedisRepo.IntegrationTests
 
         #endregion
 
-        #region MyRegion
+        #region TTL
         
         [TestMethod]
         public void SetTryGetStringTtl()
@@ -411,6 +413,97 @@ namespace PubComp.RedisRepo.IntegrationTests
         {
             AppendTest(initialValue: "1", doSetInitialValue: true, appendSuffix: "-a",
                 doAppend: true, expectedFinalResult: "1-a");
+        }
+
+        #endregion
+
+        #region Redis Sets
+
+        [TestMethod]
+        public void TestAddToRedisSet()
+        {
+            const string key = "k1";
+            var values = new[] { "bar", "bar", "a", "b", "c" };
+
+            redisContext.AddToSet(key, values);
+
+            ValidateSetResults(key, new []{"a", "b","c", "bar"});   
+        }
+
+        [TestMethod]
+        public void TestCountTestMembers()
+        {
+            const string key = "k2";
+            var values = new[] { "bar", "bar", "a", "b", "c", "a", "b" };
+
+            redisContext.AddToSet(key, values);
+            
+            Assert.AreEqual(4, redisContext.CountSetMembers(key));
+        }
+
+        [TestMethod]
+        public void TestSetsDiff()
+        {
+            const string key1 = "testSetDiff1";
+            var values1 = new[] { "a", "b", "c", "d", "e" };
+
+            const string key2 = "testSetDiff2";
+            var values2 = new[] { "a", "b", };
+
+            redisContext.AddToSet(key1, values1);
+            redisContext.AddToSet(key2, values2);
+
+            var results = redisContext.GetSetsDifference(new[] {key1, key2});
+            AssertArraysRepresentSameSet(new [] {"c","d", "e"}, results);
+        }
+
+        [TestMethod]
+        public void TestSetsUnion()
+        {
+            const string key1 = "TestSetsUnion1";
+            var values1 = new[] { "a", "c" };
+
+            const string key2 = "TestSetsUnion2";
+            var values2 = new[] { "a", "b" };
+
+            redisContext.AddToSet(key1, values1);
+            redisContext.AddToSet(key2, values2);
+
+            var results = redisContext.UnionSets(new[] { key1, key2 });
+            AssertArraysRepresentSameSet(new[] { "a", "b", "c" }, results);
+        }
+
+        [TestMethod]
+        public void TestSetsIntersect()
+        {
+            const string key1 = "TestSetsIntersect1";
+            var values1 = new[] { "a", "c" };
+
+            const string key2 = "TestSetsIntersect2";
+            var values2 = new[] { "a", "b" };
+
+            redisContext.AddToSet(key1, values1);
+            redisContext.AddToSet(key2, values2);
+
+            var results = redisContext.IntersectSets(new[] { key1, key2 });
+            AssertArraysRepresentSameSet(new[] { "a" }, results);
+        }
+
+        private void ValidateSetResults(string key, string[] expected)
+        {
+            var valuesFromRedis = redisContext.GetSetMembers(key);
+            AssertArraysRepresentSameSet(expected, valuesFromRedis);
+        }
+
+        private static void AssertArraysRepresentSameSet(string[] expected, string[] valuesFromRedis)
+        {
+            Assert.IsNotNull(valuesFromRedis);
+            foreach (var e in expected)
+            {
+                Assert.IsTrue(valuesFromRedis.Contains(e));
+            }
+
+            Assert.AreEqual(expected.Length, valuesFromRedis.Length);
         }
 
         #endregion
