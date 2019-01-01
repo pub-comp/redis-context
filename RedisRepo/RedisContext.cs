@@ -663,7 +663,10 @@ namespace PubComp.RedisRepo
         /// <returns></returns>
         public bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl)
         {
-            return this.Set(lockObjectName, lockerName, when: When.NotExists, expiry: lockTtl);
+            var isNew = this.Set(lockObjectName, lockerName, when: When.NotExists, expiry: lockTtl);
+            if (isNew) return true;
+
+            return this.TryGet(lockObjectName, out string currentLockerName) && currentLockerName == lockerName;
         }
         #endregion
 
