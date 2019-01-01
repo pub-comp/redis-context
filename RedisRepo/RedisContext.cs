@@ -347,6 +347,12 @@ namespace PubComp.RedisRepo
                 this.Database.StringSet(Key(key), value, expiry: expiry, flags: commandFlags), defaultRetries);
         }
 
+        public bool Set(string key, string value, When when, TimeSpan? expiry = null)
+        {
+            return Retry(() =>
+                this.Database.StringSet(Key(key), value, expiry: expiry, when: when, flags: commandFlags), defaultRetries);
+        }
+
         public void Set(string key, bool value, TimeSpan? expiry = null)
         {
             var intValue = value ? -1 : 0;
@@ -523,7 +529,7 @@ namespace PubComp.RedisRepo
 
             Retry(() => this.Database.SetCombineAndStore(op, Key(destinationKey), redisKeys, commandFlags), defaultRetries);
 
-        } 
+        }
         #endregion
 
         #endregion
@@ -643,6 +649,25 @@ namespace PubComp.RedisRepo
             }
         }
 
+        #endregion
+
+        #region Distributed Lock
+
+        /// <summary>
+        /// Try get a distributed lock on object <paramref name="lockObjectName"/> for the locker name <paramref name="lockerName"/>.
+        /// If the lock succeeds, it will be available for <paramref name="lockTtl"/>
+        /// </summary>
+        /// <param name="lockObjectName"></param>
+        /// <param name="lockerName"></param>
+        /// <param name="lockTtl"></param>
+        /// <returns></returns>
+        public bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl)
+        {
+            var isNew = this.Set(lockObjectName, lockerName, when: When.NotExists, expiry: lockTtl);
+            if (isNew) return true;
+
+            return this.TryGet(lockObjectName, out string currentLockerName) && currentLockerName == lockerName;
+        }
         #endregion
 
         #region GetKeys

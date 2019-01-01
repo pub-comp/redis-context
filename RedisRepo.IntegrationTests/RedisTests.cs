@@ -444,6 +444,44 @@ namespace PubComp.RedisRepo.IntegrationTests
 
         #endregion
 
+        #region distributed lock
+
+        [TestMethod]
+        public void TestDistributedLockSuccess()
+        {
+            var res = redisContext.TryGetDistributedLock("object1", "myName", TimeSpan.FromSeconds(10));
+            Assert.IsTrue(res);
+
+            // same locker should be able to gain the lock again
+            res = redisContext.TryGetDistributedLock("object1", "myName", TimeSpan.FromSeconds(10));
+            Assert.IsTrue(res);
+        }
+
+        [TestMethod]
+        public void TestDistributedLockFail()
+        {
+            var res = redisContext.TryGetDistributedLock("object1", "otherLocker", TimeSpan.FromSeconds(10));
+            Assert.IsTrue(res);
+
+            // other locker should not be able to gain the lock
+            res = redisContext.TryGetDistributedLock("object1", "myName", TimeSpan.FromSeconds(10));
+            Assert.IsFalse(res);
+        }
+
+        [TestMethod]
+        public void TestDistributedLockSuccessAfterLockTimePasses()
+        {
+            var res = redisContext.TryGetDistributedLock("object1", "otherLocker", TimeSpan.FromSeconds(2));
+            Assert.IsTrue(res);
+
+            Thread.Sleep(TimeSpan.FromSeconds(3));
+
+            // other locker should be able to gain the lock after the lock expires
+            res = redisContext.TryGetDistributedLock("object1", "myName", TimeSpan.FromSeconds(10));
+            Assert.IsTrue(res);
+        }
+        #endregion
+
         #region Redis Sets
 
         [TestMethod]
