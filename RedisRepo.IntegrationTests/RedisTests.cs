@@ -496,6 +496,19 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
 
         [TestMethod]
+        public void TestSetContainsTrue()
+        {
+            TestSetContains("a", "a", true);
+        }
+
+        [TestMethod]
+        public void TestSetContainsFalse()
+        {
+            TestSetContains("a", "b", false);
+        }
+
+
+        [TestMethod]
         public void TestCountSetMembers()
         {
             const string key = "k2";
@@ -558,6 +571,18 @@ namespace PubComp.RedisRepo.IntegrationTests
         {
             var valuesFromRedis = redisContext.GetSetMembers(key);
             CollectionAssert.AreEquivalent(expected, valuesFromRedis);
+        }
+
+        public void TestSetContains(string valueToAdd, string searchForValue, bool expected)
+        {
+            const string key = "testSetContains";
+            var values = new[] { "foo", "bar" };
+
+            redisContext.AddToSet(key, values);
+            redisContext.AddToSet(key, new[] { valueToAdd });
+
+            var setContains = redisContext.SetContains(key, searchForValue);
+            Assert.AreEqual(expected, setContains);
         }
 
         #endregion
