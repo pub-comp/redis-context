@@ -505,7 +505,7 @@ namespace PubComp.RedisRepo
 
         public bool SetContains(string key, string member)
         {
-            return Retry(() => this.Database.SetContains(key, member, commandFlags), defaultRetries);
+            return Retry(() => this.Database.SetContains(Key(key), member, commandFlags), defaultRetries);
         }
 
         #region set helpers
