@@ -430,6 +430,45 @@ namespace PubComp.RedisRepo
 
         #endregion
 
+        #region Redis Lists
+
+        /// <summary>
+        /// Adds <paramref name="value"/> to the end of a list that is at <paramref name="key"/>.
+        /// If the list doesn't exist then it is created.
+        /// </summary>
+        /// <returns>The length of the list after the addition</returns>
+        public long AddToList(string key, string value)
+        {
+            return AddRangeToList(key, new[] { value });
+        }
+
+        /// <summary>
+        /// Adds <paramref name="values"/> to the end of a list that is at <paramref name="key"/>.
+        /// If the list doesn't exist then it is created.
+        /// </summary>
+        /// <returns>The length of the list after the addition</returns>
+        public long AddRangeToList(string key, string[] values)
+        {
+            var results = Retry(() => this.Database.ListRightPush(Key(key), values.ToRedisValueArray(), flags: commandFlags), defaultRetries);
+            return results;
+        }
+
+        /// <summary>
+        /// Returns the list that is at <paramref name="key"/>.
+        /// If <paramref name="start"/> and <paramref name="stop"/> are not given then the whole list will be returned.
+        /// Else, a sub-list is returned that starts at the index <paramref name="start"/> and stops at the index <paramref name="stop"/>.
+        /// Please note that the list is zero-based indexed (so 0 is is the first element).
+        /// If <paramref name="start"/> or <paramref name="stop"/> is negative then it means it's counted from the end of the list (-1 is the last element, -2 is the element before the last element and so on).
+        /// If the index is out-of-bounds then instead of throwing an exception the index is initialized to the nearest boundary (start or end of the list), and only then the operation will be done.
+        /// </summary>
+        public string[] GetList(string key, long start = 0, long stop = -1)
+        {
+            var results = Retry(() => this.Database.ListRange(Key(key), start, stop, flags: commandFlags), defaultRetries);
+            return results.ToStringArray();
+        }
+
+        #endregion
+
         #region Redis Sets
         public void AddToSet(string key, string[] values)
         {

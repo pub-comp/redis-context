@@ -480,6 +480,65 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
         #endregion
 
+        #region Redis Lists
+
+        [TestMethod]
+        public void TestAddToRedisList()
+        {
+            const string key = "TestAddToList";
+            var values = new[] { "bar", "bar", "a", "b", "c" };
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                var length = redisContext.AddToList(key, values[i]);
+                Assert.AreEqual(i + 1, length);
+            }
+
+            ValidateListResults(key, values);
+        }
+
+        [TestMethod]
+        public void TestAddRangeToRedisList()
+        {
+            const string key = "TestAddRangeToList";
+            var values = new[] { "bar", "bar", "a", "b", "c" };
+
+            var length = redisContext.AddRangeToList(key, values);
+
+            Assert.AreEqual(values.Length, length);
+            ValidateListResults(key, values);
+        }
+
+        [TestMethod]
+        public void TestGetRedisList()
+        {
+            const string key = "TestAddRangeToList";
+            var values = new[] { "bar", "bar", "a", "b", "c" };
+
+            redisContext.AddRangeToList(key, values);
+
+            ValidateListResults(key, values);
+            ValidateSubListResults(key, -100, 100, values);
+
+            var valuesSubArray = values.Skip(1).Take(3).ToArray();
+            ValidateSubListResults(key, 1, 3, valuesSubArray);
+            ValidateSubListResults(key, -4, -2, valuesSubArray);
+        }
+
+        private void ValidateListResults(string key, string[] expected)
+        {
+            var valuesFromRedis = redisContext.GetList(key);
+            CollectionAssert.AreEqual(expected, valuesFromRedis);
+        }
+
+        private void ValidateSubListResults(string key, long start, long end, string[] expected)
+        {
+            var valuesFromRedis = redisContext.GetList(key, start, end);
+            CollectionAssert.AreEqual(expected, valuesFromRedis);
+        }
+
+        #endregion
+
         #region Redis Sets
 
         [TestMethod]
