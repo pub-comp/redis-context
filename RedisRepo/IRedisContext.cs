@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using PubComp.RedisRepo.Payoneer.Labs.Throttling.Common.Redis;
 using StackExchange.Redis;
 
 namespace PubComp.RedisRepo
@@ -117,6 +118,67 @@ namespace PubComp.RedisRepo
         bool SetContains(string key, string member);
 
         bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl);
+
+        #endregion
+
+        #region Lua Scripting
+
+        RedisScriptKeysAndArguments CreateScriptKeyAndArguments();
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        void RunScript(string script, RedisScriptKeysAndArguments keysAndParameters);
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as string</returns>
+        string RunScriptString(string script, RedisScriptKeysAndArguments keysAndParameters);
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as int</returns>
+        int RunScriptInt(string script, RedisScriptKeysAndArguments keysAndParameters);
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as string</returns>
+        long RunScriptLong(string script, RedisScriptKeysAndArguments keysAndParameters);
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as double</returns>
+        double RunScriptDouble(string script, RedisScriptKeysAndArguments keysAndParameters);
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as byte array</returns>
+        byte[] RunScriptByteArray(string script, RedisScriptKeysAndArguments keysAndParameters);
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as string[]</returns>
+        string[] RunScriptStringArray(string script, RedisScriptKeysAndArguments keysAndParameters);
 
         #endregion
     }
