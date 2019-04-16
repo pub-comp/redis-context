@@ -6,8 +6,9 @@
     <RootNamespace>PubComp.RedisRepo</RootNamespace>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
-    <AssemblyVersion>4.0.0.0</AssemblyVersion>
-    <Version>4.0.0</Version>
+    <AssemblyFileVersion>4.0.0.0</AssemblyFileVersion>
+    <AssemblyVersion>4.1.0.0</AssemblyVersion>
+    <Version>4.1.0</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
