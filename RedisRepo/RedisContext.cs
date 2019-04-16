@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using NLog;
+using PubComp.RedisRepo.Payoneer.Labs.Throttling.Common.Redis;
 using StackExchange.Redis;
 
 namespace PubComp.RedisRepo
@@ -22,6 +24,8 @@ namespace PubComp.RedisRepo
 
         internal readonly CommandFlags commandFlags;
         private readonly int totalConnections;
+
+        private ConcurrentDictionary<string, LoadedLuaScript> loadedScripts = new ConcurrentDictionary<string, LoadedLuaScript>();
 
         public RedisContext(
             string contextNamespace,
@@ -430,6 +434,45 @@ namespace PubComp.RedisRepo
 
         #endregion
 
+        #region Redis Lists
+
+        /// <summary>
+        /// Adds <paramref name="value"/> to the end of a list that is at <paramref name="key"/>.
+        /// If the list doesn't exist then it is created.
+        /// </summary>
+        /// <returns>The length of the list after the addition</returns>
+        public long AddToList(string key, string value)
+        {
+            return AddRangeToList(key, new[] { value });
+        }
+
+        /// <summary>
+        /// Adds <paramref name="values"/> to the end of a list that is at <paramref name="key"/>.
+        /// If the list doesn't exist then it is created.
+        /// </summary>
+        /// <returns>The length of the list after the addition</returns>
+        public long AddRangeToList(string key, string[] values)
+        {
+            var results = Retry(() => this.Database.ListRightPush(Key(key), values.ToRedisValueArray(), flags: commandFlags), defaultRetries);
+            return results;
+        }
+
+        /// <summary>
+        /// Returns the list that is at <paramref name="key"/>.
+        /// If <paramref name="start"/> and <paramref name="stop"/> are not given then the whole list will be returned.
+        /// Else, a sub-list is returned that starts at the index <paramref name="start"/> and stops at the index <paramref name="stop"/>.
+        /// Please note that the list is zero-based indexed (so 0 is is the first element).
+        /// If <paramref name="start"/> or <paramref name="stop"/> is negative then it means it's counted from the end of the list (-1 is the last element, -2 is the element before the last element and so on).
+        /// If the index is out-of-bounds then instead of throwing an exception the index is initialized to the nearest boundary (start or end of the list), and only then the operation will be done.
+        /// </summary>
+        public string[] GetList(string key, long start = 0, long stop = -1)
+        {
+            var results = Retry(() => this.Database.ListRange(Key(key), start, stop, flags: commandFlags), defaultRetries);
+            return results.ToStringArray();
+        }
+
+        #endregion
+
         #region Redis Sets
         public void AddToSet(string key, string[] values)
         {
@@ -693,6 +736,135 @@ namespace PubComp.RedisRepo
 
         #endregion
 
+        #region Lua Scripting
+
+        public RedisScriptKeysAndArguments CreateScriptKeyAndArguments()
+        {
+            return new RedisScriptKeysAndArguments(Key);
+        }
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        public void RunScript(string script, RedisScriptKeysAndArguments keysAndParameters)
+        {
+            Retry(() => this.RunScriptInternal(script, keysAndParameters), defaultRetries);
+        }
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as string</returns>
+        public string RunScriptString(string script, RedisScriptKeysAndArguments keysAndParameters)
+        {
+            var result = Retry(() => this.RunScriptInternal(script, keysAndParameters), defaultRetries);
+            return (string)result;
+        }
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as int</returns>
+        public int RunScriptInt(string script, RedisScriptKeysAndArguments keysAndParameters)
+        {
+            var result = Retry(() => this.RunScriptInternal(script, keysAndParameters), defaultRetries);
+
+            return (int)result;
+        }
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as string</returns>
+        public long RunScriptLong(string script, RedisScriptKeysAndArguments keysAndParameters)
+        {
+            var result = Retry(() => this.RunScriptInternal(script, keysAndParameters), defaultRetries);
+
+            return (long)result;
+        }
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as double</returns>
+        public double RunScriptDouble(string script, RedisScriptKeysAndArguments keysAndParameters)
+        {
+            var result = Retry(() => this.RunScriptInternal(script, keysAndParameters), defaultRetries);
+
+            return (double)result;
+        }
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as byte array</returns>
+        public byte[] RunScriptByteArray(string script, RedisScriptKeysAndArguments keysAndParameters)
+        {
+            var result = Retry(() => this.RunScriptInternal(script, keysAndParameters), defaultRetries);
+
+            return (byte[])result;
+        }
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as string[]</returns>
+        public string[] RunScriptStringArray(string script, RedisScriptKeysAndArguments keysAndParameters)
+        {
+            var result = Retry(() => this.RunScriptInternal(script, keysAndParameters), defaultRetries);
+
+            return (string[])result;
+        }
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns></returns>
+        private RedisResult RunScriptInternal(string script, RedisScriptKeysAndArguments keysAndParameters)
+        {
+            var conn = this.Connection;
+            var db = conn.GetDatabase(this.DatabaseNumber);
+
+            if (!this.loadedScripts.TryGetValue(script, out var loadedLuaScript))
+            {
+                var server = conn.GetServer(hosts.First());
+                var prepared = LuaScript.Prepare(script);
+                this.loadedScripts[script] = loadedLuaScript = prepared.Load(server);
+            }
+
+            try
+            {
+                return loadedLuaScript.Evaluate(db, keysAndParameters);
+            }
+            catch (RedisServerException)
+            {
+                // TODO: validate that the message is NOSCRIPT
+                var server = conn.GetServer(hosts.First());
+                var prepared = LuaScript.Prepare(script);
+                this.loadedScripts[script] = loadedLuaScript = prepared.Load(server);
+
+                // run
+                return loadedLuaScript.Evaluate(db, keysAndParameters);
+            }
+        }
+
+        #endregion
 
         public void CloseConnections()
         {

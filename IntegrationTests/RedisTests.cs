@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 
@@ -480,6 +481,65 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
         #endregion
 
+        #region Redis Lists
+
+        [TestMethod]
+        public void TestAddToRedisList()
+        {
+            const string key = "TestAddToList";
+            var values = new[] { "bar", "bar", "a", "b", "c" };
+            
+            for (var i = 0; i < values.Length; i++)
+            {
+                var length = redisContext.AddToList(key, values[i]);
+                Assert.AreEqual(i + 1, length);
+            }
+
+            ValidateListResults(key, values);
+        }
+
+        [TestMethod]
+        public void TestAddRangeToRedisList()
+        {
+            const string key = "TestAddRangeToList";
+            var values = new[] { "bar", "bar", "a", "b", "c" };
+
+            var length = redisContext.AddRangeToList(key, values);
+
+            Assert.AreEqual(values.Length, length);
+            ValidateListResults(key, values);
+        }
+
+        [TestMethod]
+        public void TestGetRedisList()
+        {
+            const string key = "TestAddRangeToList";
+            var values = new[] { "bar", "bar", "a", "b", "c" };
+
+            redisContext.AddRangeToList(key, values);
+
+            ValidateListResults(key, values);
+            ValidateSubListResults(key, -100, 100, values);
+
+            var valuesSubArray = values.Skip(1).Take(3).ToArray();
+            ValidateSubListResults(key, 1, 3, valuesSubArray);
+            ValidateSubListResults(key, -4, -2, valuesSubArray);
+        }
+
+        private void ValidateListResults(string key, string[] expected)
+        {
+            var valuesFromRedis = redisContext.GetList(key);
+            CollectionAssert.AreEqual(expected, valuesFromRedis);
+        }
+
+        private void ValidateSubListResults(string key, long start, long end, string[] expected)
+        {
+            var valuesFromRedis = redisContext.GetList(key, start, end);
+            CollectionAssert.AreEqual(expected, valuesFromRedis);
+        }
+
+        #endregion
+
         #region Redis Sets
 
         [TestMethod]
@@ -583,6 +643,170 @@ namespace PubComp.RedisRepo.IntegrationTests
             Assert.AreEqual(expected, setContains);
         }
 
+        #endregion
+
+        #region scripting tests
+
+        [TestMethod]
+        public void TestSimpleScript()
+        {
+            const string script = "return 1";
+
+            var result = redisContext.RunScriptInt(script, null);
+
+            Assert.AreEqual(1, result);
+        }
+
+        [TestMethod]
+        public void TestSimpleScriptStringArray()
+        {
+            const string script = "return {'one', 'two'}";
+
+            var result = redisContext.RunScriptStringArray(script, null);
+
+            CollectionAssert.AreEqual(new[] { "one", "two" }, result);
+        }
+
+        [TestMethod]
+        public void TestSimpleScriptThatCallsRedis()
+        {
+            const string script = "redis.call('set', @Key1, @IntArg1)";
+
+            var keysAndArgs = redisContext.CreateScriptKeyAndArguments()
+                .Apply(x =>
+                {
+                    x.Key1 = "myTest";
+                    x.IntArg1 = 7878;
+                });
+
+            redisContext.RunScript(script, keysAndArgs);
+
+            var getResult = redisContext.TryGet("myTest", out int result);
+            Assert.IsTrue(getResult);
+            Assert.AreEqual(7878, result);
+        }
+
+        // key1            - sl window key
+        // LongArg1 arg 1       - now in miliseconds
+        // int arg 2       - sliding window size in miliseconds
+        // string arg 1    - member value
+        // int arg 3      - limit
+
+        [TestMethod]
+        public void TestSlidingWindowScript()
+        {
+            var r = new Random();
+            var baseline = new DateTime(2018, 01, 01);
+            long toMiliseconds(DateTime dt)
+            {
+                return (long)(dt - baseline).TotalMilliseconds;
+            }
+
+
+            const string script = @"redis.call('ZREMRANGEBYSCORE', @Key1, -1, (@LongArg1 -  @LongArg2))
+local windowContent = redis.call('ZRANGE', @Key1, 0, -1)
+redis.call('ZADD', @Key1, @LongArg1, @StringArg1)
+redis.call('EXPIRE', @Key1, @LongArg2 / 1000)
+if (tonumber(@IntArg3) >= #windowContent) 
+    then return 0
+    else return 1
+end";
+
+            var keysAndArgs = redisContext.CreateScriptKeyAndArguments()
+                .Apply(x =>
+                {
+                    //x.Key1 = $"window{r.Next(0, int.MaxValue)}";
+                    x.Key1 = "EmailSenderProcessCount1";
+                    x.LongArg2 = 600_000;
+                    x.IntArg3 = 8_000_000;
+                });
+
+
+            // call the script 4 times
+            var runs = 3000;
+            var results = new int[runs];
+            var timeCounters = new long[runs];
+            var sw = Stopwatch.StartNew();
+            for (var i = 0; i < runs; i++)
+            {
+                redisContext.RunScriptInt(script, keysAndArgs.Apply(x =>
+                {
+                    x.LongArg1 = toMiliseconds(DateTime.Now);
+                    x.StringArg1 = $"{{'QueueId':'{Guid.NewGuid()}','__rand':'{Guid.NewGuid()}'}}";
+                }));
+
+                timeCounters[i] = sw.ElapsedMilliseconds;
+
+            }
+
+            sw.Stop();
+
+            //assert not more than 5 ms in average
+            Assert.IsTrue(sw.Elapsed < TimeSpan.FromMilliseconds(runs * 5));
+        }
+
+
+
+        // key1            - sl window key
+        // LongArg1 arg 1       - now in miliseconds
+        // int arg 2       - sliding window size in miliseconds
+        // string arg 1    - member value
+        // int arg 3      - limit
+
+        [TestMethod]
+        public void TestSlidingWindowFunctionality()
+        {
+            var r = new Random();
+            var baseline = new DateTime(2018, 01, 01);
+            long toMiliseconds(DateTime dt)
+            {
+                return (long)(dt - baseline).TotalMilliseconds;
+            }
+
+            //redis.call('EXPIRE', @Key1, @LongArg2 / 1000)
+
+            const string script = @"redis.call('ZREMRANGEBYSCORE', @Key1, -1, (@LongArg1 -  @LongArg2))
+local windowContent = redis.call('ZRANGE', @Key1, 0, -1)
+redis.call('ZADD', @Key1, @LongArg1, @StringArg1)
+return (#windowContent + 1)";
+
+            var windowSizeInSeconds = 5;
+            var keysAndArgs = redisContext.CreateScriptKeyAndArguments()
+                .Apply(x =>
+                {
+                    //x.Key1 = $"window{r.Next(0, int.MaxValue)}";
+                    x.Key1 = $"testB-{r.Next(0, 900_000)}";
+                    x.LongArg2 = windowSizeInSeconds * 1000; // sliding window size in miliseconds
+                });
+
+
+            const int runs = 10;
+            var results = new int[runs];
+            var expected = new int[runs];
+            for (var i = 0; i < runs; i++)
+            {
+                expected[i] = i < windowSizeInSeconds ? i + 1 : windowSizeInSeconds;
+            }
+
+
+            for (var i = 0; i < runs; i++)
+            {
+                results[i] = redisContext.RunScriptInt(script, keysAndArgs.Apply(x =>
+                {
+                    x.LongArg1 = toMiliseconds(DateTime.Now);
+                    x.StringArg1 = $"{{ 'a': '{Guid.NewGuid()}' }}";
+                }));
+
+                Thread.Sleep(1000);
+            }
+
+            // assert results
+            for (var i = 0; i < runs; i++)
+            {
+                Assert.AreEqual(expected[i], results[i]);
+            }
+
+        }
         #endregion
 
         #endregion
