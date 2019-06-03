@@ -121,6 +121,28 @@ namespace PubComp.RedisRepo
 
         #endregion
 
+        #region Redis Sorted Sets
+
+        long AddToSortedSet(string key, (double score, string element)[] values, When when = When.Always);
+
+        long CountSortedSetMembers(string key, double min = double.NegativeInfinity, double max = double.PositiveInfinity, Exclude exclude = Exclude.None);
+
+        long RemoveFromSortedSet(string key, string[] values);
+
+        long RemoveRangeFromSortedSetByScore(string key, double start, double end, Exclude exclude = Exclude.None);
+
+        long RemoveRangeFromSortedSetByRank(string key, long start, long end);
+
+        string[] GetSortedSetMembersByScore(string key, double start = double.NegativeInfinity, double end = double.PositiveInfinity, Order order = Order.Ascending);
+
+        string[] GetSortedSetMembersByRank(string key, long start = 0, long end = -1, Order order = Order.Ascending);
+
+        List<(double score, string element)> GetSortedSetMembersByScoreWithScores(string key, double start = double.NegativeInfinity, double end = double.PositiveInfinity, Order order = Order.Ascending);
+
+        List<(double score, string element)> GetSortedSetMembersByRankWithScores(string key, long start = 0, long end = -1, Order order = Order.Ascending);
+
+        #endregion
+
         #region Lua Scripting
 
         RedisScriptKeysAndArguments CreateScriptKeyAndArguments();

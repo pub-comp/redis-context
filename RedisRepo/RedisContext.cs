@@ -577,6 +577,64 @@ namespace PubComp.RedisRepo
 
         #endregion
 
+        #region Redis Sorted Sets
+
+        public long AddToSortedSet(string key, (double score, string element)[] values, When when = When.Always)
+        {
+            var sortedSetEntries = values?.Select(val => new SortedSetEntry(val.element, val.score)).ToArray();
+            var result = Retry(() => this.Database.SortedSetAdd(Key(key), sortedSetEntries, when, commandFlags), defaultRetries);
+            return result;
+        }
+
+        public long CountSortedSetMembers(string key, double min = double.NegativeInfinity, double max = double.PositiveInfinity, Exclude exclude = Exclude.None)
+        {
+            return Retry(() => this.Database.SortedSetLength(Key(key), min, max, exclude, commandFlags), defaultRetries);
+        }
+
+        public string[] GetSortedSetMembersByScore(string key, double start = double.NegativeInfinity, double end = double.PositiveInfinity, Order order = Order.Ascending)
+        {
+            var results = Retry(() => this.Database.SortedSetRangeByScore(Key(key), start, end, order: order, flags: commandFlags), defaultRetries);
+            return results.ToStringArray();
+        }
+
+        public string[] GetSortedSetMembersByRank(string key, long start = 0, long end = -1, Order order = Order.Ascending)
+        {
+            var results = Retry(() => this.Database.SortedSetRangeByRank(Key(key), start, end, order, commandFlags), defaultRetries);
+            return results.ToStringArray();
+        }
+
+        public List<(double score, string element)> GetSortedSetMembersByScoreWithScores(string key, double start = double.NegativeInfinity, double end = double.PositiveInfinity, Order order = Order.Ascending)
+        {
+            var results = Retry(() => this.Database.SortedSetRangeByScoreWithScores(Key(key), start, end, order: order, flags: commandFlags), defaultRetries);
+            return results.Select(res => (res.Score, res.Element.ToString())).ToList();
+        }
+
+        public List<(double score, string element)> GetSortedSetMembersByRankWithScores(string key, long start = 0, long end = -1, Order order = Order.Ascending)
+        {
+            var results = Retry(() => this.Database.SortedSetRangeByRankWithScores(Key(key), start, end, order, commandFlags), defaultRetries);
+            return results.Select(res => (res.Score, res.Element.ToString())).ToList();
+        }
+
+        public long RemoveFromSortedSet(string key, string[] values)
+        {
+            var results = Retry(() => this.Database.SortedSetRemove(Key(key), values.ToRedisValueArray(), commandFlags), defaultRetries);
+            return results;
+        }
+
+        public long RemoveRangeFromSortedSetByScore(string key, double start, double end, Exclude exclude = Exclude.None)
+        {
+            var results = Retry(() => this.Database.SortedSetRemoveRangeByScore(Key(key), start, end, exclude, commandFlags), defaultRetries);
+            return results;
+        }
+
+        public long RemoveRangeFromSortedSetByRank(string key, long start, long end)
+        {
+            var results = Retry(() => this.Database.SortedSetRemoveRangeByRank(Key(key), start, end, commandFlags), defaultRetries);
+            return results;
+        }
+
+        #endregion
+
         #region Increment
 
         public long Increment(string key, long value)

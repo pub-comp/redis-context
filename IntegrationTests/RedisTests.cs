@@ -645,6 +645,163 @@ namespace PubComp.RedisRepo.IntegrationTests
 
         #endregion
 
+        #region Redis Sorted Sets
+
+        [TestMethod]
+        public void TestAddToRedisSortedSet()
+        {
+            const string key = "k1";
+            var values = new[] { (14.0, "test2"), (11.0,"foo"), (11.0, "test"), (13.0, "foo"), (12.0, "bar") };
+
+            var count = redisContext.AddToSortedSet(key, values);
+            Assert.AreEqual(4L, count);
+            ValidateSortedSetResults(key, new[] { (11.0, "test"), (12.0, "bar"), (13.0, "foo"), (14.0, "test2") }, 11,14);
+        }
+
+        [TestMethod]
+        public void TestRedisSortedSetCountMembers_Full()
+        {
+            const string key = "k1";
+            var values = new[] { (14.0, "test2"), (11.0, "foo"), (11.0, "test"), (13.0, "foo"), (12.0, "bar") };
+
+            redisContext.AddToSortedSet(key, values);
+
+            var count = redisContext.CountSortedSetMembers(key);
+            Assert.AreEqual(4L, count);
+        }
+
+        [TestMethod]
+        public void TestRedisSortedSetCountMembers_Partial()
+        {
+            const string key = "k1";
+            var values = new[] { (14.0, "test2"), (11.0, "foo"), (11.0, "test"), (13.0, "foo"), (12.0, "bar") };
+
+            redisContext.AddToSortedSet(key, values);
+
+            var count = redisContext.CountSortedSetMembers(key, 12, 13);
+            Assert.AreEqual(2L, count);
+        }
+
+        [TestMethod]
+        public void TestRedisGetSortedSetMembersByScore()
+        {
+            const string key = "k1";
+            var values = new[] { (14.0, "test2"), (11.0, "foo"), (11.0, "test"), (12.0, "bar") };
+
+            redisContext.AddToSortedSet(key, values);
+
+            var result = redisContext.GetSortedSetMembersByScore(key, 11, 12);
+            CollectionAssert.AreEquivalent(new[]{ "foo", "test", "bar" }, result);
+        }
+
+        [TestMethod]
+        public void TestRedisGetSortedSetMembersByScoreDescending()
+        {
+            const string key = "k1";
+            var values = new[] { (14.0, "test2"), (11.0, "foo"), (11.0, "test"), (12.0, "bar") };
+
+            redisContext.AddToSortedSet(key, values);
+
+            var result = redisContext.GetSortedSetMembersByScore(key, 11, 12, Order.Descending);
+            CollectionAssert.AreEquivalent(new[] { "bar", "test", "foo" }, result);
+        }
+
+        [TestMethod]
+        public void TestRedisGetSortedSetMembersByRank()
+        {
+            const string key = "k1";
+            var values = new[] { (14.0, "test2"), (11.0, "foo"), (11.0, "test"), (12.0, "bar") };
+
+            redisContext.AddToSortedSet(key, values);
+
+            var result = redisContext.GetSortedSetMembersByRank(key, 1, 2);
+            CollectionAssert.AreEquivalent(new[] { "test", "bar" }, result);
+        }
+
+        [TestMethod]
+        public void TestRedisGetSortedSetMembersByRankDescending()
+        {
+            const string key = "k1";
+            var values = new[] { (14.0, "test2"), (11.0, "foo"), (11.0, "test"), (12.0, "bar") };
+
+            redisContext.AddToSortedSet(key, values);
+
+            var result = redisContext.GetSortedSetMembersByRank(key, 1, 2, Order.Descending);
+            CollectionAssert.AreEquivalent(new[] { "bar", "test" }, result);
+        }
+
+        [TestMethod]
+        public void TestRedisGetSortedSetMembersByScoreWithScores()
+        {
+            const string key = "k1";
+            var values = new[] { (14.0, "test2"), (11.0, "foo"), (11.0, "test"), (12.0, "bar") };
+
+            redisContext.AddToSortedSet(key, values);
+
+            var result = redisContext.GetSortedSetMembersByScoreWithScores(key, 11, 12);
+            CollectionAssert.AreEquivalent(new[] { (11.0, "foo"), (11.0, "test"), (12.0, "bar") }, result);
+        }
+
+        [TestMethod]
+        public void TestRedisGetSortedSetMembersByRankWithScores()
+        {
+            const string key = "k1";
+            var values = new[] { (14.0, "test2"), (11.0, "foo"), (11.0, "test"), (12.0, "bar") };
+
+            redisContext.AddToSortedSet(key, values);
+
+            var result = redisContext.GetSortedSetMembersByRankWithScores(key, 1, 2);
+            CollectionAssert.AreEquivalent(new[] { (11.0, "test"), (12.0, "bar") }, result);
+        }
+
+        [TestMethod]
+        public void TestRedisRemoveFromSortedSet()
+        {
+            const string key = "k1";
+            var values = new[] { (14.0, "test2") };
+
+            redisContext.AddToSortedSet(key, values);
+
+            var countRemoved = redisContext.RemoveFromSortedSet(key, new[]{ "test2" });
+            Assert.AreEqual(1L, countRemoved);
+            ValidateSortedSetResults(key, new(double, string)[0], 14, 14);
+        }
+
+        [TestMethod]
+        public void TestRedisRemoveRangeFromSortedSetByScore()
+        {
+            const string key = "k1";
+            var values = new[] { (14.0, "test2"), (11.0, "foo"), (11.0, "test"), (12.0, "bar") };
+
+            redisContext.AddToSortedSet(key, values);
+
+            var countRemoved = redisContext.RemoveRangeFromSortedSetByScore(key, 11, 12);
+            Assert.AreEqual(3L, countRemoved);
+            ValidateSortedSetResults(key, new[]{ (14.0, "test2") });
+        }
+
+        [TestMethod]
+        public void TestRedisRemoveRangeFromSortedSetByRank()
+        {
+            const string key = "k1";
+            var values = new[] { (14.0, "test2"), (11.0, "foo"), (11.0, "test"), (12.0, "bar") };
+
+            redisContext.AddToSortedSet(key, values);
+
+            var countRemoved = redisContext.RemoveRangeFromSortedSetByRank(key, 0, 1);
+            Assert.AreEqual(2L, countRemoved);
+            ValidateSortedSetResults(key, new[] { (12.0, "bar"),(14.0, "test2") });
+        }
+
+
+        private void ValidateSortedSetResults(string key, (double, string)[] expected, double scoreStart = double.NegativeInfinity, double scoreEnd = double.PositiveInfinity)
+        {
+            var valuesFromRedis = redisContext.GetSortedSetMembersByScoreWithScores(key, scoreStart, scoreEnd);
+            CollectionAssert.AreEquivalent(expected, valuesFromRedis);
+        }
+
+        #endregion
+
         #region scripting tests
 
         [TestMethod]
