@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using StackExchange.Redis;
 
 namespace PubComp.RedisRepo
 {
@@ -24,7 +23,7 @@ namespace PubComp.RedisRepo
         double Increment(string key, double value);
         long Increment(string key, long value);
         void Set(string key, bool value, TimeSpan? expiry = null);
-        bool Set(string key, string value, When when, TimeSpan? expiry = null);
+        bool Set(string key, string value, Enums.When when, TimeSpan? expiry = null);
         void Set(string key, bool? value, TimeSpan? expiry = null);
         void Set(string key, double value, TimeSpan? expiry = null);
         void Set(string key, double? value, TimeSpan? expiry = null);

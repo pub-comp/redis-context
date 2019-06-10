@@ -1,25 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace PubComp.RedisRepo.Enums
 {
-    public enum SetOperations { Union, Intersect, Difference }
+    public enum SetOperation { Union, Intersect, Difference }
 
     internal static class SetOperationsExtensions
     {
-        private static Dictionary<SetOperations, StackExchange.Redis.SetOperation> mapping = new Dictionary<SetOperations, StackExchange.Redis.SetOperation>();
+        private static Dictionary<SetOperation, StackExchange.Redis.SetOperation> mapping = new Dictionary<SetOperation, StackExchange.Redis.SetOperation>();
 
         static SetOperationsExtensions()
         {
-            mapping[SetOperations.Union] = StackExchange.Redis.SetOperation.Union;
-            mapping[SetOperations.Intersect] = StackExchange.Redis.SetOperation.Intersect;
-            mapping[SetOperations.Difference] = StackExchange.Redis.SetOperation.Difference;
+            mapping[SetOperation.Union] = StackExchange.Redis.SetOperation.Union;
+            mapping[SetOperation.Intersect] = StackExchange.Redis.SetOperation.Intersect;
+            mapping[SetOperation.Difference] = StackExchange.Redis.SetOperation.Difference;
         }
 
-        internal static StackExchange.Redis.SetOperation ToRedisOperation(this SetOperations op)
+        internal static StackExchange.Redis.SetOperation ToRedisOperation(this SetOperation op)
         {
             var res = StackExchange.Redis.SetOperation.Union;
             mapping.TryGetValue(op, out res);

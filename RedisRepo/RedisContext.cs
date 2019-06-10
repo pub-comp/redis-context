@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using NLog;
 using StackExchange.Redis;
 
@@ -342,6 +341,21 @@ namespace PubComp.RedisRepo
 
         #endregion
 
+        public StackExchange.Redis.When ToSE(Enums.When when)
+        {
+            switch (when)
+            {
+                case Enums.When.Always:
+                    return StackExchange.Redis.When.Always;
+                case Enums.When.Exists:
+                    return StackExchange.Redis.When.Exists;
+                case Enums.When.NotExists:
+                    return StackExchange.Redis.When.NotExists;
+                default:
+                    throw new NotSupportedException(when.ToString());
+            }
+        }
+
         #region Set (Set value)
 
         public void Set(string key, string value, TimeSpan? expiry = null)
@@ -350,10 +364,10 @@ namespace PubComp.RedisRepo
                 this.Database.StringSet(Key(key), value, expiry: expiry, flags: commandFlags), defaultRetries);
         }
 
-        public bool Set(string key, string value, When when, TimeSpan? expiry = null)
+        public bool Set(string key, string value, Enums.When when, TimeSpan? expiry = null)
         {
             return Retry(() =>
-                this.Database.StringSet(Key(key), value, expiry: expiry, when: when, flags: commandFlags), defaultRetries);
+                this.Database.StringSet(Key(key), value, expiry: expiry, when: ToSE(when), flags: commandFlags), defaultRetries);
         }
 
         public void Set(string key, bool value, TimeSpan? expiry = null)
@@ -705,7 +719,7 @@ namespace PubComp.RedisRepo
         /// <returns></returns>
         public bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl)
         {
-            var isNew = this.Set(lockObjectName, lockerName, when: When.NotExists, expiry: lockTtl);
+            var isNew = this.Set(lockObjectName, lockerName, when: Enums.When.NotExists, expiry: lockTtl);
             if (isNew) return true;
 
             return this.TryGet(lockObjectName, out string currentLockerName) && currentLockerName == lockerName;
