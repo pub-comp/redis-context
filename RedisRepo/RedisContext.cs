@@ -93,8 +93,6 @@ namespace PubComp.RedisRepo
             }
         }
 
-
-
         #region Properties
 
         private int connectionIndex = 0;
@@ -341,21 +339,6 @@ namespace PubComp.RedisRepo
 
         #endregion
 
-        public StackExchange.Redis.When ToSE(Enums.When when)
-        {
-            switch (when)
-            {
-                case Enums.When.Always:
-                    return StackExchange.Redis.When.Always;
-                case Enums.When.Exists:
-                    return StackExchange.Redis.When.Exists;
-                case Enums.When.NotExists:
-                    return StackExchange.Redis.When.NotExists;
-                default:
-                    throw new NotSupportedException(when.ToString());
-            }
-        }
-
         #region Set (Set value)
 
         public void Set(string key, string value, TimeSpan? expiry = null)
@@ -367,7 +350,7 @@ namespace PubComp.RedisRepo
         public bool Set(string key, string value, Enums.When when, TimeSpan? expiry = null)
         {
             return Retry(() =>
-                this.Database.StringSet(Key(key), value, expiry: expiry, when: ToSE(when), flags: commandFlags), defaultRetries);
+                this.Database.StringSet(Key(key), value, expiry: expiry, when: when.ToSE(), flags: commandFlags), defaultRetries);
         }
 
         public void Set(string key, bool value, TimeSpan? expiry = null)
@@ -888,5 +871,141 @@ namespace PubComp.RedisRepo
                 conn?.Dispose();
             }
         }
+
+        #region Redis Sorted Sets
+
+        #region AddToSortedSet
+
+        public bool AddToSortedSet<T>(
+            string key, T value, double score, Enums.When when = Enums.When.Always)
+        {
+            var result = Retry(() =>
+                this.Database.SortedSetAdd(
+                    Key(key), value.ToRedis(), score, when.ToSE(), commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        #endregion
+
+        #region AddToSortedSet[]
+
+        public long SortedSetAdd<T>(
+            string key, (T value, double score)[] values,
+            Enums.When when = Enums.When.Always)
+        {
+            var sortedSetEntries = values?.Select(val =>
+                new SortedSetEntry(val.value.ToRedis(), val.score)).ToArray();
+
+            var result = Retry(() =>
+                this.Database.SortedSetAdd(
+                    Key(key), sortedSetEntries, when.ToSE(), commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        #endregion
+
+        public long SortedSetGetLength(
+            string key, double min = double.NegativeInfinity,
+            double max = double.PositiveInfinity, Enums.Exclude exclude = Enums.Exclude.None)
+        {
+            return Retry(() =>
+                this.Database.SortedSetLength(
+                    Key(key), min, max, exclude.ToSE(), commandFlags), defaultRetries);
+        }
+
+        #region GetRange
+
+        public T[] SortedSetGetRangeByScore<T>(
+            string key, Func<object, T> redisValueConverter,
+            double start = double.NegativeInfinity, double end = double.PositiveInfinity, Enums.SortOrder order = Enums.SortOrder.Ascending)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRangeByScore(
+                    Key(key), start, end, order: order.ToSE(), flags: commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public T[] SortedSetGetRangeByRank<T>(
+            string key, Func<object, T> redisValueConverter,
+            long start = 0, long end = -1, Enums.SortOrder order = Enums.SortOrder.Ascending)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRangeByRank(
+                    Key(key), start, end, order.ToSE(), commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public List<(T value, double score)> SortedSetGetRangeByScoreWithScores<T>(
+            string key, Func<object, T> redisValueConverter,
+            double start = double.NegativeInfinity,
+            double end = double.PositiveInfinity, Enums.SortOrder order = Enums.SortOrder.Ascending)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRangeByScoreWithScores(
+                    Key(key), start, end, order: order.ToSE(), flags: commandFlags), defaultRetries);
+
+            return results.Select((SortedSetEntry r) => (redisValueConverter(r.Element), r.Score)).ToList();
+        }
+
+        public List<(T value, double score)> SortedSetGetRangeByRankWithScores<T>(
+            string key, Func<object, T> redisValueConverter,
+            long start = 0, long end = -1, Enums.SortOrder order = Enums.SortOrder.Ascending)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRangeByRankWithScores(
+                    Key(key), start, end, order.ToSE(), commandFlags), defaultRetries);
+
+            return results.Select((SortedSetEntry r) => (redisValueConverter(r.Element), r.Score)).ToList();
+        }
+
+        #endregion
+
+        #region Remove
+
+        public bool SortedSetRemove<T>(string key, T value)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRemove(
+                    Key(key), value.ToRedis(), commandFlags), defaultRetries);
+
+            return results;
+        }
+
+        public long SortedSetRemove<T>(string key, T[] values)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRemove(
+                    Key(key), values.ToRedisArray(), commandFlags), defaultRetries);
+
+            return results;
+        }
+
+        public long SortedSetRemoveRangeByScore(
+            string key, double start, double end, Enums.Exclude exclude = Enums.Exclude.None)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRemoveRangeByScore(
+                    Key(key), start, end, exclude.ToSE(), commandFlags), defaultRetries);
+
+            return results;
+        }
+
+        public long SortedSetRemoveRangeByRank(
+            string key, long start, long end)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRemoveRangeByRank(
+                    Key(key), start, end, commandFlags), defaultRetries);
+
+            return results;
+        }
+
+        #endregion
+
+        #endregion
     }
 }
