@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using NLog;
-using PubComp.RedisRepo.Payoneer.Labs.Throttling.Common.Redis;
 using StackExchange.Redis;
 
 namespace PubComp.RedisRepo

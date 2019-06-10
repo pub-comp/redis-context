@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using PubComp.RedisRepo.Payoneer.Labs.Throttling.Common.Redis;
 using StackExchange.Redis;
 
 namespace PubComp.RedisRepo
