@@ -179,5 +179,64 @@ namespace PubComp.RedisRepo
         string[] RunScriptStringArray(string script, RedisScriptKeysAndArguments keysAndParameters);
 
         #endregion
+
+        #region Redis Sorted Sets
+
+        #region AddToSortedSet
+
+        bool AddToSortedSet<T>(
+            string key, T value, double score, Enums.When when = Enums.When.Always);
+
+        #endregion
+
+        #region AddToSortedSet[]
+
+        long SortedSetAdd<T>(
+            string key, (T value, double score)[] values,
+            Enums.When when = Enums.When.Always);
+
+        #endregion
+
+        long SortedSetGetLength(
+            string key, double min = double.NegativeInfinity,
+            double max = double.PositiveInfinity, Enums.Exclude exclude = Enums.Exclude.None);
+
+        #region GetRange
+
+        T[] SortedSetGetRangeByScore<T>(
+            string key, Func<object, T> redisValueConverter,
+            double start = double.NegativeInfinity, double end = double.PositiveInfinity,
+            Enums.SortOrder order = Enums.SortOrder.Ascending);
+
+        T[] SortedSetGetRangeByRank<T>(
+            string key, Func<object, T> redisValueConverter,
+            long start = 0, long end = -1, Enums.SortOrder order = Enums.SortOrder.Ascending);
+
+        List<(T value, double score)> SortedSetGetRangeByScoreWithScores<T>(
+            string key, Func<object, T> redisValueConverter,
+            double start = double.NegativeInfinity,
+            double end = double.PositiveInfinity, Enums.SortOrder order = Enums.SortOrder.Ascending);
+
+        List<(T value, double score)> SortedSetGetRangeByRankWithScores<T>(
+            string key, Func<object, T> redisValueConverter,
+            long start = 0, long end = -1, Enums.SortOrder order = Enums.SortOrder.Ascending);
+
+        #endregion
+
+        #region Remove
+
+        bool SortedSetRemove<T>(string key, T value);
+
+        long SortedSetRemove<T>(string key, T[] values);
+
+        long SortedSetRemoveRangeByScore(
+            string key, double start, double end, Enums.Exclude exclude = Enums.Exclude.None);
+
+        long SortedSetRemoveRangeByRank(
+            string key, long start, long end);
+
+        #endregion
+
+        #endregion
     }
 }
