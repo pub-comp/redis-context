@@ -470,6 +470,59 @@ namespace PubComp.RedisRepo
         #endregion
 
         #region Redis Sets
+
+        public bool SetAdd<T>(string key, T value)
+        {
+            var redisValue = value.ToRedis();
+
+            var result = Retry(() =>
+                this.Database.SetAdd(
+                    Key(key), redisValue, commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        public long SetAdd<T>(string key, T[] values)
+        {
+            var redisValues = values?.Select(val => val.ToRedis()).ToArray();
+
+            var result = Retry(() =>
+                this.Database.SetAdd(
+                    Key(key), redisValues, commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        public bool SetRemove<T>(string key, T value)
+        {
+            var redisValue = value.ToRedis();
+
+            var result = Retry(() =>
+                this.Database.SetRemove(
+                    Key(key), redisValue, commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        public long SetRemove<T>(string key, T[] values)
+        {
+            var redisValues = values?.Select(val => val.ToRedis()).ToArray();
+
+            var result = Retry(() =>
+                this.Database.SetRemove(
+                    Key(key), redisValues, commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        public long SetLength(string key)
+        {
+            var result = Retry(() =>
+                this.Database.SetLength(Key(key), commandFlags), defaultRetries);
+
+            return result;
+        }
+
         public void AddToSet(string key, string[] values)
         {
             Retry(() => this.Database.SetAdd(Key(key), values.ToRedisValueArray(), flags: commandFlags), defaultRetries);
