@@ -84,6 +84,14 @@ namespace PubComp.RedisRepo
 
         long SetLength(string key);
 
+        T[] SetGetItems<T>(string key, Func<object, T> redisValueConverter);
+
+        T[] SetsUnion<T>(string[] keys, Func<object, T> redisValueConverter);
+
+        T[] SetsIntersect<T>(string[] keys, Func<object, T> redisValueConverter);
+
+        T[] SetsDiff<T>(string[] keys, Func<object, T> redisValueConverter);
+
         void AddToSet(string key, string[] values);
 
         long CountSetMembers(string key);

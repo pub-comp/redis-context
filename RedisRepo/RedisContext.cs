@@ -493,6 +493,47 @@ namespace PubComp.RedisRepo
             return result;
         }
 
+        public T[] SetGetItems<T>(string key, Func<object, T> redisValueConverter)
+        {
+            var results = Retry(() =>
+                this.Database.SetMembers(Key(key), commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public T[] SetsUnion<T>(string[] keys, Func<object, T> redisValueConverter)
+        {
+            var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
+
+            var results = Retry(() =>
+                this.Database.SetCombine(
+                    SetOperation.Union, redisKeys, commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public T[] SetsIntersect<T>(string[] keys, Func<object, T> redisValueConverter)
+        {
+            var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
+
+            var results = Retry(() =>
+                this.Database.SetCombine(
+                    SetOperation.Intersect, redisKeys, commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public T[] SetsDiff<T>(string[] keys, Func<object, T> redisValueConverter)
+        {
+            var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
+
+            var results = Retry(() =>
+                this.Database.SetCombine(
+                    SetOperation.Difference, redisKeys, commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
         public bool SetRemove<T>(string key, T value)
         {
             var redisValue = value.ToRedis();
