@@ -215,13 +215,13 @@ namespace PubComp.RedisRepo
                 return value != null ? Convert.ToInt32(value) : (int?)null;
 
             if (typeof(T) == typeof(double))
-                return Convert.ToBoolean(value);
+                return Convert.ToDouble(value);
 
             if (typeof(T) == typeof(double?))
-                return value != null ? Convert.ToInt64(value) : (double?)null;
+                return value != null ? Convert.ToDouble(value) : (double?)null;
 
             if (typeof(T) == typeof(long))
-                return Convert.ToBoolean(value);
+                return Convert.ToInt64(value);
 
             if (typeof(T) == typeof(long?))
                 return value != null ? Convert.ToInt64(value) : (long?)null;
