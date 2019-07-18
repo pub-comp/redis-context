@@ -218,6 +218,73 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
 
         [TestMethod]
+        public void SetOperations_Double()
+        {
+            var key1 = TestContext.TestName + ".1";
+            var key2 = TestContext.TestName + ".2";
+            var key3 = TestContext.TestName + ".3";
+
+            redisContext.Delete(key1);
+            redisContext.Delete(key2);
+            redisContext.Delete(key3);
+
+            redisContext.SetAdd<double>(key1, new[] { 5.0, 2.0, 1.5 });
+            redisContext.SetAdd<double>(key1, 3.5);
+
+            CollectionAssert.AreEquivalent(
+                new[] { 1.5, 2.0, 3.5, 5.0 },
+                redisContext.SetGetItems(key1, RedisValueConverter.ToDouble)
+                .OrderBy(x => x).ToList());
+
+            redisContext.SetAdd<double>(key2, new[] { 7.0, 4.0, 1.5 });
+            redisContext.SetAdd<double>(key3, new[] { 1.5, 7.0, 3.5, 8.5 });
+
+            var actualIntersect123 = redisContext.SetsIntersect(
+                new[] { key1, key2, key3 }, RedisValueConverter.ToDouble);
+            CollectionAssert.AreEquivalent(
+                new[] { 1.5 },
+                actualIntersect123.OrderBy(x => x).ToList());
+
+            var actualUnion123 = redisContext.SetsUnion(
+                new[] { key1, key2, key3 }, RedisValueConverter.ToDouble);
+            CollectionAssert.AreEquivalent(
+                new[] { 1.5, 2.0, 3.5, 4.0, 5.0, 7.0, 8.5 },
+                actualUnion123.OrderBy(x => x).ToList());
+
+            var actualMinus123 = redisContext.SetsDiff(
+                new[] { key1, key2, key3 }, RedisValueConverter.ToDouble);
+            CollectionAssert.AreEquivalent(
+                new[] { 2.0, 5.0 },
+                actualMinus123.OrderBy(x => x).ToList());
+
+            Assert.AreEqual(4, redisContext.SetLength(key1));
+            Assert.AreEqual(3, redisContext.SetLength(key2));
+            Assert.AreEqual(4, redisContext.SetLength(key3));
+
+            redisContext.SetRemove<double>(key1, 2.0);
+            Assert.AreEqual(3, redisContext.SetLength(key1));
+            CollectionAssert.AreEquivalent(
+                new[] { 1.5, 3.5, 5.0 },
+                redisContext.SetGetItems(key1, RedisValueConverter.ToDouble)
+                .OrderBy(x => x).ToList());
+
+            redisContext.SetRemove<double>(key3, new[] { 2.0, 8.5, 7.0 });
+            Assert.AreEqual(2, redisContext.SetLength(key3));
+            CollectionAssert.AreEquivalent(
+                new[] { 1.5, 3.5 },
+                redisContext.SetGetItems(key3, RedisValueConverter.ToDouble)
+                .OrderBy(x => x).ToList());
+
+            redisContext.Delete(key2);
+            redisContext.SetAdd<double>(key2, 9.0);
+            Assert.AreEqual(1, redisContext.SetLength(key2));
+            CollectionAssert.AreEquivalent(
+                new[] { 9.0 },
+                redisContext.SetGetItems(key2, RedisValueConverter.ToDouble)
+                .OrderBy(x => x).ToList());
+        }
+
+        [TestMethod]
         public void SetDeleteMany()
         {
             Set(TestContext.TestName + ".1", 1);

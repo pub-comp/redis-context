@@ -71,8 +71,26 @@ namespace PubComp.RedisRepo
         string[] GetList(string key, long start = 0, long stop = -1);
 
         #endregion
-        
+
         #region Redis Sets
+
+        bool SetAdd<T>(string key, T value);
+
+        long SetAdd<T>(string key, T[] values);
+
+        bool SetRemove<T>(string key, T value);
+
+        long SetRemove<T>(string key, T[] values);
+
+        long SetLength(string key);
+
+        T[] SetGetItems<T>(string key, Func<object, T> redisValueConverter);
+
+        T[] SetsUnion<T>(string[] keys, Func<object, T> redisValueConverter);
+
+        T[] SetsIntersect<T>(string[] keys, Func<object, T> redisValueConverter);
+
+        T[] SetsDiff<T>(string[] keys, Func<object, T> redisValueConverter);
 
         void AddToSet(string key, string[] values);
 
