@@ -10,8 +10,8 @@
     <IncludeSymbols>true</IncludeSymbols>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <!--Inc Version & AssemblyFileVersion each version-->
-    <AssemblyFileVersion>5.1.0.0</AssemblyFileVersion>
-    <Version>5.1.0</Version>
+    <AssemblyFileVersion>5.1.1.0</AssemblyFileVersion>
+    <Version>5.1.1</Version>
     <!--Don't inc AssemblyVersion for minor versions!-->
     <AssemblyVersion>5.0.0.0</AssemblyVersion>
   </PropertyGroup>
@@ -25,6 +25,4 @@
   <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
-
-
 </Project>

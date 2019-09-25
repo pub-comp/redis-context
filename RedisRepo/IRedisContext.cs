@@ -135,6 +135,8 @@ namespace PubComp.RedisRepo
 
         bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl);
 
+        void ReleaseDistributedLock(string lockObjectName);
+
         #endregion
 
         #region Lua Scripting

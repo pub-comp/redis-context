@@ -797,9 +797,19 @@ namespace PubComp.RedisRepo
         public bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl)
         {
             var isNew = this.Set(lockObjectName, lockerName, when: Enums.When.NotExists, expiry: lockTtl);
-            if (isNew) return true;
+            if (isNew)
+                return true;
 
-            return this.TryGet(lockObjectName, out string currentLockerName) && currentLockerName == lockerName;
+            var result = this.TryGet(lockObjectName, out string currentLockerName) && currentLockerName == lockerName;
+            if (result)
+                this.SetTimeToLive(lockObjectName, lockTtl);
+
+            return result;
+        }
+
+        public void ReleaseDistributedLock(string lockObjectName)
+        {
+            this.Delete(lockObjectName);
         }
         #endregion
 
