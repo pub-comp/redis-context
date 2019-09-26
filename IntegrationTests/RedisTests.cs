@@ -69,6 +69,11 @@ namespace PubComp.RedisRepo.IntegrationTests
             {
                 RetryUtil.Retry(action, maxAttempts);
             }
+
+            public TimeSpan? GetKeyTtl(string key)
+            {
+                return RetryUtil.Retry(() => this.Database.KeyTimeToLive(key), 3);
+            }
         }
 
         #endregion
@@ -546,6 +551,39 @@ namespace PubComp.RedisRepo.IntegrationTests
             res = redisContext.TryGetDistributedLock("object1", "myName", TimeSpan.FromSeconds(10));
             Assert.IsTrue(res);
         }
+
+
+        [TestMethod]
+        public void TestLockExtended()
+        {
+            const string lockName = nameof(TestLockExtended);
+            var res = redisContext.TryGetDistributedLock(lockName, "locker", TimeSpan.FromSeconds(5));
+            Thread.Sleep(4000);
+            res = redisContext.TryGetDistributedLock(lockName, "locker", TimeSpan.FromSeconds(5));
+
+            var ttl = redisContext.GetTimeToLive(lockName);
+
+            Assert.IsNotNull(ttl, "TTL should exist");
+            Assert.IsTrue(ttl.Value.TotalSeconds > 3, "TTL was not extended");
+        }
+
+        [TestMethod]
+        public void TestLockRelease()
+        {
+            const string lockName = nameof(TestLockRelease);
+            redisContext.TryGetDistributedLock(lockName, "locker1", TimeSpan.FromSeconds(10));
+            Thread.Sleep(500);
+            redisContext.ReleaseDistributedLock(lockName, "locker2");
+            redisContext.ReleaseDistributedLock(lockName, "locker3");
+
+            var exists = redisContext.TryGet(lockName, out string _);
+            Assert.IsTrue(exists, "lock was released by a wrong locker");
+
+            redisContext.ReleaseDistributedLock(lockName, "locker1");
+            exists = redisContext.TryGet(lockName, out bool _);
+            Assert.IsFalse(exists, "lock was not released");
+        }
+
         #endregion
 
         #region Redis Lists

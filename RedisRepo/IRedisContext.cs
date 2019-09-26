@@ -135,7 +135,7 @@ namespace PubComp.RedisRepo
 
         bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl);
 
-        void ReleaseDistributedLock(string lockObjectName);
+        void ReleaseDistributedLock(string lockObjectName, string lockerName);
 
         #endregion
 
@@ -157,6 +157,14 @@ namespace PubComp.RedisRepo
         /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
         /// <returns>result as string</returns>
         string RunScriptString(string script, RedisScriptKeysAndArguments keysAndParameters);
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as bool</returns>
+        bool RunScriptBool(string script, RedisScriptKeysAndArguments keysAndParameters);
 
         /// <summary>
         /// Run a lua script against the connected redis instance
