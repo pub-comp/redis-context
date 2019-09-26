@@ -796,10 +796,39 @@ namespace PubComp.RedisRepo
         /// <returns></returns>
         public bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl)
         {
-            var isNew = this.Set(lockObjectName, lockerName, when: Enums.When.NotExists, expiry: lockTtl);
-            if (isNew) return true;
 
-            return this.TryGet(lockObjectName, out string currentLockerName) && currentLockerName == lockerName;
+            const string lockScript = @"local isNew = redis.call('SETNX', @Key1, @StringArg1)
+if isNew == 1 then 
+    redis.call('EXPIRE', @Key1, @IntArg1)
+    return true
+end
+
+local lockOwner = redis.call('GET', @Key1)
+if lockOwner ~= nil and lockOwner == @StringArg1 then
+    redis.call('EXPIRE', @Key1, @IntArg1)
+    return true
+end
+
+return false
+";
+
+            var args = this.CreateScriptKeyAndArguments();
+            args.Key1 = lockObjectName;
+            args.StringArg1 = lockerName;
+            args.IntArg1 = (int)lockTtl.TotalSeconds;
+
+            return this.RunScriptBool(lockScript, args);
+        }
+
+        public void ReleaseDistributedLock(string lockObjectName, string lockerName)
+        {
+            var key = Key(lockObjectName);
+            var tran = this.Database.CreateTransaction();
+            var condResult = tran.AddCondition(Condition.StringEqual(key, lockerName));
+            var task = tran.KeyDeleteAsync(key, CommandFlags.None);
+            var execResult = tran.Execute();
+
+
         }
         #endregion
 
@@ -853,6 +882,19 @@ namespace PubComp.RedisRepo
         {
             var result = Retry(() => this.RunScriptInternal(script, keysAndParameters), defaultRetries);
             return (string)result;
+        }
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as bool</returns>
+        public bool RunScriptBool(string script, RedisScriptKeysAndArguments keysAndParameters)
+        {
+            var result = Retry(() => this.RunScriptInternal(script, keysAndParameters), defaultRetries);
+
+            return (bool)result;
         }
 
         /// <summary>
