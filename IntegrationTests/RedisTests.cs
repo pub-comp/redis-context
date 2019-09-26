@@ -568,6 +568,20 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
 
         [TestMethod]
+        public void TestLockNotExtendedByAnotherLocker()
+        {
+            const string lockName = nameof(TestLockExtended);
+            var res = redisContext.TryGetDistributedLock(lockName, "locker1", TimeSpan.FromSeconds(5));
+            Thread.Sleep(3000);
+            res = redisContext.TryGetDistributedLock(lockName, "locker2", TimeSpan.FromSeconds(5));
+
+            var ttl = redisContext.GetTimeToLive(lockName);
+
+            Assert.IsNotNull(ttl, "TTL should exist");
+            Assert.IsTrue(ttl.Value.TotalSeconds < 3, "Lock extended by wrong locker");
+        }
+
+        [TestMethod]
         public void TestLockRelease()
         {
             const string lockName = nameof(TestLockRelease);
