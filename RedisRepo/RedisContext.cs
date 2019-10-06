@@ -1,9 +1,9 @@
-﻿using System;
+﻿using NLog;
+using StackExchange.Redis;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using NLog;
-using StackExchange.Redis;
 
 namespace PubComp.RedisRepo
 {
@@ -664,6 +664,110 @@ namespace PubComp.RedisRepo
 
         }
         #endregion
+
+        #endregion
+
+        #region Redis Hashes
+
+        public bool HashesTryGetField<T, TK>(string key, T fieldName, out TK value)
+        {
+            value = default(TK);
+
+            var redisValue = Retry(() =>
+                this.Database.HashGet(Key(key), fieldName.ToRedis()), defaultRetries);
+
+            var success = false;
+
+            if (typeof(TK) == typeof(string))
+            {
+                value = (TK)(object)RedisValueConverter.ToString(redisValue);
+                success = true;
+            }
+
+            else if (typeof(TK) == typeof(int))
+            {
+                value = (TK)(object)RedisValueConverter.ToInt(redisValue);
+                success = true;
+            }
+
+            else if (typeof(TK) == typeof(long))
+            {
+                value = (TK)(object)RedisValueConverter.ToLong(redisValue);
+                success = true;
+            }
+
+            else if (typeof(TK) == typeof(double))
+            {
+                value = (TK)(object)RedisValueConverter.ToDouble(redisValue);
+                success = true;
+            }
+
+            else if (typeof(TK) == typeof(bool))
+            {
+                value = (TK)(object)RedisValueConverter.ToBool(redisValue);
+                success = true;
+            }
+
+            return success;
+        }
+
+        public HashEntry[] HashesGetAll(string key)
+        {
+            return Retry(() =>
+                this.Database.HashGetAll(Key(key)), defaultRetries);
+        }
+
+        public void HashesSet(string key, HashEntry[] value)
+        {
+            Retry(() =>
+                this.Database.HashSet(Key(key), value), defaultRetries);
+        }
+
+        public void HashesSet<T, TK>(string key, T fieldName, TK value)
+        {
+            Retry(() =>
+                this.Database.HashSet(Key(key), fieldName.ToRedis(), value.ToRedis()), defaultRetries);
+        }
+
+        public bool HashesDeleteField(string key, string fieldName)
+        {
+            return Retry(() =>
+                this.Database.HashDelete(Key(key), fieldName), defaultRetries);
+        }
+
+        public bool HashesDeleteField(string key, bool fieldName)
+        {
+            return Retry(() =>
+                this.Database.HashDelete(Key(key), fieldName), defaultRetries);
+        }
+
+        public bool HashesDeleteField(string key, int fieldName)
+        {
+            return Retry(() =>
+                this.Database.HashDelete(Key(key), fieldName), defaultRetries);
+        }
+
+        public bool HashesDeleteField(string key, long fieldName)
+        {
+            return Retry(() =>
+                this.Database.HashDelete(Key(key), fieldName), defaultRetries);
+        }
+
+        public bool HashesDeleteField(string key, double fieldName)
+        {
+            return Retry(() =>
+                 this.Database.HashDelete(Key(key), fieldName), defaultRetries);
+        }
+
+        /// <summary>
+        /// Get the number of fields in a hash
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public long HashesLength(string key)
+        {
+            return Retry(() => this.Database.HashLength(Key(key)), defaultRetries);
+        }
 
         #endregion
 

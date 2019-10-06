@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using StackExchange.Redis;
 
 namespace PubComp.RedisRepo
 {
@@ -134,6 +135,30 @@ namespace PubComp.RedisRepo
         bool SetContains(string key, string member);
 
         bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl);
+
+        #endregion
+
+        #region Redis Hashes
+
+        void HashesSet(string key, HashEntry[] value);
+
+        void HashesSet<T, TK>(string key, T fieldName, TK value);
+
+        bool HashesTryGetField<T, TK>(string key, T fieldName, out TK value);
+
+        HashEntry[] HashesGetAll(string key);
+
+        bool HashesDeleteField(string key, string fieldName);
+
+        bool HashesDeleteField(string key, bool fieldName);
+
+        bool HashesDeleteField(string key, int fieldName);
+
+        bool HashesDeleteField(string key, long fieldName);
+
+        bool HashesDeleteField(string key, double fieldName);
+
+        long HashesLength(string key);
 
         #endregion
 

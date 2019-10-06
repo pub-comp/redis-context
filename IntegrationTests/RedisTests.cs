@@ -1,11 +1,11 @@
-﻿using System;
+﻿using FluentAssertions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using StackExchange.Redis;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
-
 using System.Threading;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using StackExchange.Redis;
 
 namespace PubComp.RedisRepo.IntegrationTests
 {
@@ -21,7 +21,7 @@ namespace PubComp.RedisRepo.IntegrationTests
 
         protected static void ClearDb(IRedisContext redisContext, TestContext testContext)
         {
-            var concreteContext = (RedisTestContext) redisContext;
+            var concreteContext = (RedisTestContext)redisContext;
             Assert.IsTrue(concreteContext.IsLocal);
             var keys = RedisTestContext.Retry(() => redisContext.GetKeys("*"), 5);
             redisContext.Delete(keys.ToArray());
@@ -48,10 +48,10 @@ namespace PubComp.RedisRepo.IntegrationTests
                         case DnsEndPoint dns:
                             return dns.Host.ToLower() == "localhost";
                         case IPEndPoint ip:
-                        {
-                            var ipBytes = ip.Address.GetAddressBytes();
-                            return ipBytes[0] == 127 && ipBytes[1] == 0 && ipBytes[2] == 0 && ipBytes[3] == 1;
-                        }
+                            {
+                                var ipBytes = ip.Address.GetAddressBytes();
+                                return ipBytes[0] == 127 && ipBytes[1] == 0 && ipBytes[2] == 0 && ipBytes[3] == 1;
+                            }
                         default:
                             return false;
                     }
@@ -70,7 +70,7 @@ namespace PubComp.RedisRepo.IntegrationTests
                 RetryUtil.Retry(action, maxAttempts);
             }
         }
-
+        
         #endregion
 
         #region Test Cases
@@ -176,7 +176,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         #endregion
 
         #region TTL
-        
+
         [TestMethod]
         public void SetTryGetStringTtl()
         {
@@ -290,7 +290,7 @@ namespace PubComp.RedisRepo.IntegrationTests
             Set(TestContext.TestName + ".1", 1);
             Set(TestContext.TestName + ".2", "two");
             Set(TestContext.TestName + ".3", 3.0);
-            
+
             var key1There = TryGet(TestContext.TestName + ".1", out int _);
             var key2There = TryGet(TestContext.TestName + ".2", out string _);
             var key3There = TryGet(TestContext.TestName + ".3", out double _);
@@ -321,14 +321,15 @@ namespace PubComp.RedisRepo.IntegrationTests
         {
             SetTryGetTest("valU", doExchange: true, newValue: "newV");
         }
-        
+
         [TestMethod]
         public void SetExchangeTryGetStringNullThenNot()
         {
             SetTryGetTest(null, doExchange: true, newValue: "newV");
         }
 
-        [TestMethod][ExpectedException(typeof(ArgumentException))]
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
         public void SetExchangeTryGetStringNotThenNull()
         {
             SetTryGetTest("valU", doExchange: true, newValue: null);
@@ -352,7 +353,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             SetTryGetTest((int?)null, doExchange: true, newValue: (int?)9);
         }
 
-        [TestMethod][ExpectedException(typeof(ArgumentException))]
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
         public void SetExchangeTryGetNullableIntNotThenNull()
         {
             SetTryGetTest((int?)8, doExchange: true, newValue: (int?)null);
@@ -370,7 +372,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             SetTryGetTest((long?)-7L, doExchange: true, newValue: 2L);
         }
 
-        [TestMethod][ExpectedException(typeof(ArgumentException))]
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
         public void SetExchangeTryGetNullableLongNull()
         {
             SetTryGetTest((long?)1L, doExchange: true, newValue: (long?)null);
@@ -388,7 +391,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             SetTryGetTest((double?)0.6, doExchange: true, newValue: (double?)-0.3);
         }
 
-        [TestMethod][ExpectedException(typeof(ArgumentException))]
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
         public void SetExchangeTryGetNullableDoubleNull()
         {
             SetTryGetTest((double?)0.4, doExchange: true, newValue: (double?)null);
@@ -424,7 +428,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             SetTryGetTest((bool?)null, doExchange: true, newValue: (bool?)true);
         }
 
-        [TestMethod][ExpectedException(typeof(ArgumentException))]
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
         public void SetExchangeTryGetNullableBoolNotThenNull()
         {
             SetTryGetTest((bool?)false, doExchange: true, newValue: (bool?)null);
@@ -555,7 +560,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         {
             const string key = "TestAddToList";
             var values = new[] { "bar", "bar", "a", "b", "c" };
-            
+
             for (var i = 0; i < values.Length; i++)
             {
                 var length = redisContext.AddToList(key, values[i]);
@@ -617,7 +622,7 @@ namespace PubComp.RedisRepo.IntegrationTests
 
             redisContext.AddToSet(key, values);
 
-            ValidateSetResults(key, new []{"a", "b","c", "bar"});   
+            ValidateSetResults(key, new[] { "a", "b", "c", "bar" });
         }
 
         [TestMethod]
@@ -640,7 +645,7 @@ namespace PubComp.RedisRepo.IntegrationTests
             var values = new[] { "bar", "bar", "a", "b", "c", "a", "b" };
 
             redisContext.AddToSet(key, values);
-            
+
             Assert.AreEqual(4, redisContext.CountSetMembers(key));
         }
 
@@ -656,8 +661,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             redisContext.AddToSet(key1, values1);
             redisContext.AddToSet(key2, values2);
 
-            var results = redisContext.GetSetsDifference(new[] {key1, key2});
-            CollectionAssert.AreEquivalent(new [] {"c","d", "e"}, results);
+            var results = redisContext.GetSetsDifference(new[] { key1, key2 });
+            CollectionAssert.AreEquivalent(new[] { "c", "d", "e" }, results);
         }
 
         [TestMethod]
@@ -708,6 +713,452 @@ namespace PubComp.RedisRepo.IntegrationTests
 
             var setContains = redisContext.SetContains(key, searchForValue);
             Assert.AreEqual(expected, setContains);
+        }
+
+        #endregion
+
+        #region Redis Hashes
+
+        [TestMethod]
+        public void Hashes_SetHashEntryWithSingleField_Added()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry("Test", "Test2")
+            };
+
+            //Act
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Assert
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(hashEntryToAdd);
+        }
+
+        [TestMethod]
+        public void Hashes_SetHashEntryWithMultipleFields_Added()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry("Test", "Test2"),
+                new HashEntry(false, true),
+                new HashEntry(int.MaxValue, "TestValue2"),
+                new HashEntry("TestField3", 1.0),
+                new HashEntry(double.MinValue, long.MinValue)
+            };
+
+            //Act
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Assert
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(hashEntryToAdd);
+        }
+
+        [TestMethod]
+        public void Hashes_SetWithStringFieldAndValue_Added()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = "TestField";
+            var value = "TestValue";
+
+            //Act
+            redisContext.HashesSet(key, field, value);
+
+            //Assert
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(new HashEntry(field, value));
+        }
+
+        [TestMethod]
+        public void Hashes_SetWithIntFieldAndStringValue_Added()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = int.MaxValue;
+            var value = "TestValue2";
+
+            //Act
+            redisContext.HashesSet(key, field, value);
+
+            //Assert
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(new HashEntry(field, value));
+        }
+
+        [TestMethod]
+        public void Hashes_SetWithStringFieldAndDoubleValue_Added()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = "TestField3";
+            var value = 1.0;
+
+            //Act
+            redisContext.HashesSet(key, field, value);
+
+            //Assert
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(new HashEntry(field, value));
+        }
+
+        [TestMethod]
+        public void Hashes_SetWithDoubleFieldAndLongValue_Added()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = double.MinValue;
+            var value = long.MaxValue;
+
+            //Act
+            redisContext.HashesSet(key, field, value);
+
+            //Assert
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(new HashEntry(field, value));
+        }
+
+        [TestMethod]
+        public void Hashes_SetWithBooleanFieldAndValue_Added()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = true;
+            var value = false;
+
+            //Act
+            redisContext.HashesSet(key, field, value);
+
+            //Assert
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(new HashEntry(field, value));
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(NotSupportedException))]
+        public void Hashes_SetWithInvalidFieldAndValidValue_NotAdded()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = char.MinValue;
+            var value = "TestValue";
+
+            //Act
+            redisContext.HashesSet(key, field, value);
+
+            //Assert
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(new HashEntry(field, value));
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(NotSupportedException))]
+        public void Hashes_SetWithValidFieldAndInvalidValue_NotAdded()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = "TestField";
+            var value = char.MaxValue;
+
+            //Act
+            redisContext.HashesSet(key, field, value);
+
+            //Assert
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(new HashEntry(field, value));
+        }
+
+        [TestMethod]
+        public void Hashes_TryGetFieldString_ValueReturned()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = "TestField";
+            var value = "TestValue";
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry(field, value)
+            };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            redisContext.HashesTryGetField<string, string>(key, field, out var returnedValue);
+
+            //Assert
+            Assert.AreEqual(value, returnedValue);
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(hashEntryToAdd);
+        }
+
+        [TestMethod]
+        public void Hashes_TryGetFieldInt_ValueReturned()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = "TestField";
+            var value = 123;
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry(field, value)
+            };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            redisContext.HashesTryGetField<string, int>(key, field, out var returnedValue);
+
+            //Assert
+            Assert.AreEqual(value, returnedValue);
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(hashEntryToAdd);
+        }
+
+        [TestMethod]
+        public void Hashes_TryGetFieldDouble_ValueReturned()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = "TestField";
+            var value = 123D;
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry(field, value)
+            };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            redisContext.HashesTryGetField<string, double>(key, field, out var returnedValue);
+
+            //Assert
+            Assert.AreEqual(value, returnedValue);
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(hashEntryToAdd);
+        }
+
+        [TestMethod]
+        public void Hashes_TryGetFieldLong_ValueReturned()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = "TestField";
+            var value = 123L;
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry(field, value)
+            };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            redisContext.HashesTryGetField<string, long>(key, field, out var returnedValue);
+
+            //Assert
+            Assert.AreEqual(value, returnedValue);
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(hashEntryToAdd);
+        }
+
+        [TestMethod]
+        public void Hashes_TryGetFieldBool_ValueReturned()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = "TestField";
+            var value = true;
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry(field, value)
+            };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            redisContext.HashesTryGetField<string, bool>(key, field, out var returnedValue);
+
+            //Assert
+            Assert.AreEqual(value, returnedValue);
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(hashEntryToAdd);
+        }
+
+        [TestMethod]
+        public void Hashes_TryGetFieldInvalidType_TryGetFalse()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = "TestField";
+            var value = "TestValue";
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry(field, value)
+            };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            var result = redisContext.HashesTryGetField<string, char>(key, field, out var returnedValue);
+
+            //Assert
+            Assert.AreEqual(default(char), returnedValue);
+            Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public void Hashes_DeleteFieldString_Deleted()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = "TestField";
+            var value = "TestValue";
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry(field, value)
+            };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            var result = redisContext.HashesDeleteField(key, field);
+
+            //Assert
+            Assert.IsTrue(result);
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().NotContain(hashEntryToAdd);
+        }
+
+        [TestMethod]
+        public void Hashes_DeleteFieldInt_Deleted()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = 123;
+            var value = "TestValue";
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry(field, value)
+            };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            var result = redisContext.HashesDeleteField(key, field);
+
+            //Assert
+            Assert.IsTrue(result);
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().NotContain(hashEntryToAdd);
+        }
+
+        [TestMethod]
+        public void Hashes_DeleteFieldDouble_Deleted()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = 123D;
+            var value = "TestValue";
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry(field, value)
+            };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            var result = redisContext.HashesDeleteField(key, field);
+
+            //Assert
+            Assert.IsTrue(result);
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().NotContain(hashEntryToAdd);
+        }
+
+        [TestMethod]
+        public void Hashes_DeleteFieldLong_Deleted()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = 123L;
+            var value = "TestValue";
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry(field, value)
+            };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            var result = redisContext.HashesDeleteField(key, field);
+
+            //Assert
+            Assert.IsTrue(result);
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().NotContain(hashEntryToAdd);
+        }
+
+        [TestMethod]
+        public void Hashes_DeleteFieldBool_Deleted()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = true;
+            var value = "TestValue";
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry(field, value)
+            };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            var result = redisContext.HashesDeleteField(key, field);
+
+            //Assert
+            Assert.IsTrue(result);
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().NotContain(hashEntryToAdd);
+        }
+
+        [TestMethod]
+        public void Hashes_LengthOfTwoFields_LengthReturned()
+        {
+            //Arrange
+            const string key = "testHashesLength";
+            var hashEntryToAdd = new HashEntry[]
+            {
+                new HashEntry("TestField1", "TestValue1"),
+                new HashEntry("TestField2", "TestValue2")
+            };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            var length = redisContext.HashesLength(key);
+
+            //Assert
+            Assert.AreEqual(hashEntryToAdd.Length, length);
+        }
+
+        [TestMethod]
+        public void Hashes_LengthOfZeroFields_LengthReturned()
+        {
+            //Arrange
+            const string key = "testHashesLength";
+            var hashEntryToAdd = new HashEntry[] { };
+
+            redisContext.HashesSet(key, hashEntryToAdd);
+
+            //Act
+            var length = redisContext.HashesLength(key);
+
+            //Assert
+            Assert.AreEqual(hashEntryToAdd.Length, length);
         }
 
         #endregion
