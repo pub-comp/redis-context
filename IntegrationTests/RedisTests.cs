@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StackExchange.Redis;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -720,46 +721,6 @@ namespace PubComp.RedisRepo.IntegrationTests
         #region Redis Hashes
 
         [TestMethod]
-        public void Hashes_SetHashEntryWithSingleField_Added()
-        {
-            //Arrange
-            const string key = "testHashesSet";
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry("Test", "Test2")
-            };
-
-            //Act
-            redisContext.HashesSet(key, hashEntryToAdd);
-
-            //Assert
-            var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(hashEntryToAdd);
-        }
-
-        [TestMethod]
-        public void Hashes_SetHashEntryWithMultipleFields_Added()
-        {
-            //Arrange
-            const string key = "testHashesSet";
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry("Test", "Test2"),
-                new HashEntry(false, true),
-                new HashEntry(int.MaxValue, "TestValue2"),
-                new HashEntry("TestField3", 1.0),
-                new HashEntry(double.MinValue, long.MinValue)
-            };
-
-            //Act
-            redisContext.HashesSet(key, hashEntryToAdd);
-
-            //Assert
-            var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(hashEntryToAdd);
-        }
-
-        [TestMethod]
         public void Hashes_SetWithStringFieldAndValue_Added()
         {
             //Arrange
@@ -772,7 +733,10 @@ namespace PubComp.RedisRepo.IntegrationTests
 
             //Assert
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(new HashEntry(field, value));
+            hashesContains.Should().Contain(new Dictionary<object, object>
+            {
+                {field, value}
+            });
         }
 
         [TestMethod]
@@ -788,7 +752,10 @@ namespace PubComp.RedisRepo.IntegrationTests
 
             //Assert
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(new HashEntry(field, value));
+            hashesContains.Should().Contain(new Dictionary<object, object>
+            {
+                {field, value}
+            });
         }
 
         [TestMethod]
@@ -804,7 +771,10 @@ namespace PubComp.RedisRepo.IntegrationTests
 
             //Assert
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(new HashEntry(field, value));
+            hashesContains.Should().Contain(new Dictionary<object, object>
+            {
+                {field, value}
+            });
         }
 
         [TestMethod]
@@ -820,7 +790,10 @@ namespace PubComp.RedisRepo.IntegrationTests
 
             //Assert
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(new HashEntry(field, value));
+            hashesContains.Should().Contain(new Dictionary<object, object>
+            {
+                {field, value}
+            });
         }
 
         [TestMethod]
@@ -836,9 +809,15 @@ namespace PubComp.RedisRepo.IntegrationTests
 
             //Assert
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(new HashEntry(field, value));
+            hashesContains.Should().Contain(new Dictionary<object, object>
+            {
+                {field, value}
+            });
         }
 
+        /// <summary>
+        /// Trying to set hash with field of 'Char' type that is not a supported type
+        /// </summary>
         [TestMethod]
         [ExpectedException(typeof(NotSupportedException))]
         public void Hashes_SetWithInvalidFieldAndValidValue_NotAdded()
@@ -853,9 +832,15 @@ namespace PubComp.RedisRepo.IntegrationTests
 
             //Assert
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(new HashEntry(field, value));
+            hashesContains.Should().Contain(new Dictionary<object, object>
+            {
+                {field, value}
+            });
         }
 
+        /// <summary>
+        /// Trying to set hash with value of 'Char' type that is not a supported type
+        /// </summary>
         [TestMethod]
         [ExpectedException(typeof(NotSupportedException))]
         public void Hashes_SetWithValidFieldAndInvalidValue_NotAdded()
@@ -870,7 +855,61 @@ namespace PubComp.RedisRepo.IntegrationTests
 
             //Assert
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(new HashEntry(field, value));
+            hashesContains.Should().Contain(new Dictionary<object, object>
+            {
+                {field, value}
+            });
+        }
+
+        [TestMethod]
+        public void Hashes_SetKeyWithNewField_Added()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = true;
+            var value = false;
+            var newField = "TestField";
+            var newValue = "TestValue";
+
+            redisContext.HashesSet(key, field, value);
+
+            //Act
+            redisContext.HashesSet(key, newField, newValue);
+
+            //Assert
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(new Dictionary<object, object>
+            {
+                {field, value},
+                {newField, newValue }
+            });
+        }
+
+        [TestMethod]
+        public void Hashes_SetFieldWithNewValue_Updated()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var field = "TestField";
+            var value = "TestValue";
+            var updatedValue = "TestUpdatedValue";
+            var expectedHashLength = 1;
+
+            redisContext.HashesSet(key, field, value);
+
+            //Act
+            redisContext.HashesSet(key, field, updatedValue);
+
+            //Assert
+            var hashesContains = redisContext.HashesGetAll(key);
+            var hashLength = redisContext.HashesLength(key);
+
+            hashesContains.Should().Contain(new Dictionary<object, object>
+            {
+                {field, updatedValue}
+            });
+
+            hashLength.Should().Be(expectedHashLength);
         }
 
         [TestMethod]
@@ -880,12 +919,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             const string key = "testHashesSet";
             var field = "TestField";
             var value = "TestValue";
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry(field, value)
-            };
 
-            redisContext.HashesSet(key, hashEntryToAdd);
+            redisContext.HashesSet(key, field, value);
 
             //Act
             redisContext.HashesTryGetField<string, string>(key, field, out var returnedValue);
@@ -893,7 +928,7 @@ namespace PubComp.RedisRepo.IntegrationTests
             //Assert
             Assert.AreEqual(value, returnedValue);
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(hashEntryToAdd);
+            hashesContains.Should().Contain(new KeyValuePair<object, object>(field, value));
         }
 
         [TestMethod]
@@ -903,12 +938,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             const string key = "testHashesSet";
             var field = "TestField";
             var value = 123;
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry(field, value)
-            };
 
-            redisContext.HashesSet(key, hashEntryToAdd);
+            redisContext.HashesSet(key, field, value);
 
             //Act
             redisContext.HashesTryGetField<string, int>(key, field, out var returnedValue);
@@ -916,7 +947,7 @@ namespace PubComp.RedisRepo.IntegrationTests
             //Assert
             Assert.AreEqual(value, returnedValue);
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(hashEntryToAdd);
+            hashesContains.Should().Contain(new KeyValuePair<object, object>(field, value));
         }
 
         [TestMethod]
@@ -926,20 +957,17 @@ namespace PubComp.RedisRepo.IntegrationTests
             const string key = "testHashesSet";
             var field = "TestField";
             var value = 123D;
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry(field, value)
-            };
 
-            redisContext.HashesSet(key, hashEntryToAdd);
+            redisContext.HashesSet(key, field, value);
 
             //Act
-            redisContext.HashesTryGetField<string, double>(key, field, out var returnedValue);
+            var wasGetSuccessful = redisContext.HashesTryGetField<string, double>(key, field, out var returnedValue);
 
             //Assert
+            Assert.IsTrue(wasGetSuccessful);
             Assert.AreEqual(value, returnedValue);
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(hashEntryToAdd);
+            hashesContains.Should().Contain(new KeyValuePair<object, object>(field, value));
         }
 
         [TestMethod]
@@ -949,20 +977,17 @@ namespace PubComp.RedisRepo.IntegrationTests
             const string key = "testHashesSet";
             var field = "TestField";
             var value = 123L;
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry(field, value)
-            };
 
-            redisContext.HashesSet(key, hashEntryToAdd);
+            redisContext.HashesSet(key, field, value);
 
             //Act
-            redisContext.HashesTryGetField<string, long>(key, field, out var returnedValue);
+            var wasGetSuccessful = redisContext.HashesTryGetField<string, long>(key, field, out var returnedValue);
 
             //Assert
+            Assert.IsTrue(wasGetSuccessful);
             Assert.AreEqual(value, returnedValue);
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(hashEntryToAdd);
+            hashesContains.Should().Contain(new KeyValuePair<object, object>(field, value));
         }
 
         [TestMethod]
@@ -972,12 +997,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             const string key = "testHashesSet";
             var field = "TestField";
             var value = true;
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry(field, value)
-            };
 
-            redisContext.HashesSet(key, hashEntryToAdd);
+            redisContext.HashesSet(key, field, value);
 
             //Act
             redisContext.HashesTryGetField<string, bool>(key, field, out var returnedValue);
@@ -985,22 +1006,21 @@ namespace PubComp.RedisRepo.IntegrationTests
             //Assert
             Assert.AreEqual(value, returnedValue);
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().Contain(hashEntryToAdd);
+            hashesContains.Should().Contain(new KeyValuePair<object, object>(field, value));
         }
 
+        /// <summary>
+        /// Trying to get hash with of type 'Char' that is not a supported type, false is returned with the default value of the requested type
+        /// </summary>
         [TestMethod]
-        public void Hashes_TryGetFieldInvalidType_TryGetFalse()
+        public void Hashes_TryGetFieldInvalidType_ReturnedFalse()
         {
             //Arrange
             const string key = "testHashesSet";
             var field = "TestField";
             var value = "TestValue";
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry(field, value)
-            };
 
-            redisContext.HashesSet(key, hashEntryToAdd);
+            redisContext.HashesSet(key, field, value);
 
             //Act
             var result = redisContext.HashesTryGetField<string, char>(key, field, out var returnedValue);
@@ -1017,12 +1037,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             const string key = "testHashesSet";
             var field = "TestField";
             var value = "TestValue";
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry(field, value)
-            };
 
-            redisContext.HashesSet(key, hashEntryToAdd);
+            redisContext.HashesSet(key, field, value);
 
             //Act
             var result = redisContext.HashesDeleteField(key, field);
@@ -1030,7 +1046,7 @@ namespace PubComp.RedisRepo.IntegrationTests
             //Assert
             Assert.IsTrue(result);
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().NotContain(hashEntryToAdd);
+            hashesContains.Should().NotContain(new KeyValuePair<object, object>(field, value));
         }
 
         [TestMethod]
@@ -1040,12 +1056,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             const string key = "testHashesSet";
             var field = 123;
             var value = "TestValue";
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry(field, value)
-            };
 
-            redisContext.HashesSet(key, hashEntryToAdd);
+            redisContext.HashesSet(key, field, value);
 
             //Act
             var result = redisContext.HashesDeleteField(key, field);
@@ -1053,7 +1065,7 @@ namespace PubComp.RedisRepo.IntegrationTests
             //Assert
             Assert.IsTrue(result);
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().NotContain(hashEntryToAdd);
+            hashesContains.Should().NotContain(new KeyValuePair<object, object>(field, value));
         }
 
         [TestMethod]
@@ -1063,12 +1075,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             const string key = "testHashesSet";
             var field = 123D;
             var value = "TestValue";
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry(field, value)
-            };
 
-            redisContext.HashesSet(key, hashEntryToAdd);
+            redisContext.HashesSet(key, field, value);
 
             //Act
             var result = redisContext.HashesDeleteField(key, field);
@@ -1076,7 +1084,7 @@ namespace PubComp.RedisRepo.IntegrationTests
             //Assert
             Assert.IsTrue(result);
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().NotContain(hashEntryToAdd);
+            hashesContains.Should().NotContain(new KeyValuePair<object, object>(field, value));
         }
 
         [TestMethod]
@@ -1086,12 +1094,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             const string key = "testHashesSet";
             var field = 123L;
             var value = "TestValue";
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry(field, value)
-            };
 
-            redisContext.HashesSet(key, hashEntryToAdd);
+            redisContext.HashesSet(key, field, value);
 
             //Act
             var result = redisContext.HashesDeleteField(key, field);
@@ -1099,7 +1103,7 @@ namespace PubComp.RedisRepo.IntegrationTests
             //Assert
             Assert.IsTrue(result);
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().NotContain(hashEntryToAdd);
+            hashesContains.Should().NotContain(new KeyValuePair<object, object>(field, value));
         }
 
         [TestMethod]
@@ -1107,14 +1111,10 @@ namespace PubComp.RedisRepo.IntegrationTests
         {
             //Arrange
             const string key = "testHashesSet";
-            var field = true;
+            bool field = true;
             var value = "TestValue";
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry(field, value)
-            };
 
-            redisContext.HashesSet(key, hashEntryToAdd);
+            redisContext.HashesSet(key, field, value);
 
             //Act
             var result = redisContext.HashesDeleteField(key, field);
@@ -1122,7 +1122,7 @@ namespace PubComp.RedisRepo.IntegrationTests
             //Assert
             Assert.IsTrue(result);
             var hashesContains = redisContext.HashesGetAll(key);
-            hashesContains.Should().NotContain(hashEntryToAdd);
+            hashesContains.Should().NotContain(new KeyValuePair<object, object>(field, value));
         }
 
         [TestMethod]
@@ -1130,19 +1130,15 @@ namespace PubComp.RedisRepo.IntegrationTests
         {
             //Arrange
             const string key = "testHashesLength";
-            var hashEntryToAdd = new HashEntry[]
-            {
-                new HashEntry("TestField1", "TestValue1"),
-                new HashEntry("TestField2", "TestValue2")
-            };
-
-            redisContext.HashesSet(key, hashEntryToAdd);
+            var expectedLength = 2;
+            redisContext.HashesSet(key, "TestField1", "TestValue1");
+            redisContext.HashesSet(key, "TestField2", "TestValue2");
 
             //Act
             var length = redisContext.HashesLength(key);
 
             //Assert
-            Assert.AreEqual(hashEntryToAdd.Length, length);
+            Assert.AreEqual(expectedLength, length);
         }
 
         [TestMethod]
@@ -1150,15 +1146,15 @@ namespace PubComp.RedisRepo.IntegrationTests
         {
             //Arrange
             const string key = "testHashesLength";
-            var hashEntryToAdd = new HashEntry[] { };
+            var expectedLength = 0;
 
-            redisContext.HashesSet(key, hashEntryToAdd);
+            redisContext.HashesSet(key, 1, (int?)null);
 
             //Act
             var length = redisContext.HashesLength(key);
 
             //Assert
-            Assert.AreEqual(hashEntryToAdd.Length, length);
+            Assert.AreEqual(expectedLength, length);
         }
 
         #endregion

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using StackExchange.Redis;
 
@@ -140,13 +141,14 @@ namespace PubComp.RedisRepo
 
         #region Redis Hashes
 
-        void HashesSet(string key, HashEntry[] value);
-
+        /// <summary>
+        /// Add or update new pair of field and value to a specific key in Hashes data type
+        /// </summary>
         void HashesSet<T, TK>(string key, T fieldName, TK value);
 
         bool HashesTryGetField<T, TK>(string key, T fieldName, out TK value);
 
-        HashEntry[] HashesGetAll(string key);
+        IDictionary<object, object> HashesGetAll(string key);
 
         bool HashesDeleteField(string key, string fieldName);
 
@@ -158,6 +160,9 @@ namespace PubComp.RedisRepo
 
         bool HashesDeleteField(string key, double fieldName);
 
+        /// <summary>
+        /// Returns the number of fields in the Hashes data type for a specific key
+        /// </summary>
         long HashesLength(string key);
 
         #endregion

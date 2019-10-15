@@ -1,6 +1,7 @@
 ﻿using NLog;
 using StackExchange.Redis;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -181,8 +182,7 @@ namespace PubComp.RedisRepo
                 Ssl = GetValue(arguments, nameof(ConfigurationOptions.Ssl), false),
                 SslHost = GetValue(arguments, nameof(ConfigurationOptions.SslHost), null),
                 ConfigurationChannel = GetValue(arguments, nameof(ConfigurationOptions.ConfigurationChannel), null),
-                TieBreaker = GetValue(arguments, nameof(ConfigurationOptions.TieBreaker), null),
-
+                TieBreaker = GetValue(arguments, nameof(ConfigurationOptions.TieBreaker), null)
             };
             cfg.ResponseTimeout = GetValue(arguments, nameof(ConfigurationOptions.ResponseTimeout), cfg.SyncTimeout);
 
@@ -711,16 +711,11 @@ namespace PubComp.RedisRepo
             return success;
         }
 
-        public HashEntry[] HashesGetAll(string key)
+        public IDictionary<object, object> HashesGetAll(string key)
         {
-            return Retry(() =>
+            var results = Retry(() =>
                 this.Database.HashGetAll(Key(key)), defaultRetries);
-        }
-
-        public void HashesSet(string key, HashEntry[] value)
-        {
-            Retry(() =>
-                this.Database.HashSet(Key(key), value), defaultRetries);
+            return results.ToDictionary(x => (object)x.Name, x => (object)x.Value);
         }
 
         public void HashesSet<T, TK>(string key, T fieldName, TK value)
