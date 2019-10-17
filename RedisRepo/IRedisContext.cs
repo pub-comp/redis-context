@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using StackExchange.Redis;
 
 namespace PubComp.RedisRepo
 {
@@ -136,6 +138,41 @@ namespace PubComp.RedisRepo
         bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl);
 
         void ReleaseDistributedLock(string lockObjectName, string lockerName);
+
+        #endregion
+
+        #region Redis Hashes
+
+        /// <summary>
+        /// Add or update new pairs to a specific key in Hashes data type
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value">Pairs of fields and values</param>
+        void HashesSet(string key, IDictionary<object, object> value);
+
+        /// <summary>
+        /// Add or update new pair of field and value to a specific key in Hashes data type
+        /// </summary>
+        void HashesSet<T, TK>(string key, T fieldName, TK value);
+
+        bool HashesTryGetField<T, TK>(string key, T fieldName, out TK value);
+
+        IDictionary<object, object> HashesGetAll(string key);
+
+        bool HashesDeleteField(string key, string fieldName);
+
+        bool HashesDeleteField(string key, bool fieldName);
+
+        bool HashesDeleteField(string key, int fieldName);
+
+        bool HashesDeleteField(string key, long fieldName);
+
+        bool HashesDeleteField(string key, double fieldName);
+
+        /// <summary>
+        /// Returns the number of fields in the Hashes data type for a specific key
+        /// </summary>
+        long HashesLength(string key);
 
         #endregion
 
