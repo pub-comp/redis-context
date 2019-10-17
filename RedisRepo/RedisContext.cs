@@ -182,7 +182,8 @@ namespace PubComp.RedisRepo
                 Ssl = GetValue(arguments, nameof(ConfigurationOptions.Ssl), false),
                 SslHost = GetValue(arguments, nameof(ConfigurationOptions.SslHost), null),
                 ConfigurationChannel = GetValue(arguments, nameof(ConfigurationOptions.ConfigurationChannel), null),
-                TieBreaker = GetValue(arguments, nameof(ConfigurationOptions.TieBreaker), null)
+                TieBreaker = GetValue(arguments, nameof(ConfigurationOptions.TieBreaker), null),
+
             };
             cfg.ResponseTimeout = GetValue(arguments, nameof(ConfigurationOptions.ResponseTimeout), cfg.SyncTimeout);
 
@@ -716,6 +717,13 @@ namespace PubComp.RedisRepo
             var results = Retry(() =>
                 this.Database.HashGetAll(Key(key)), defaultRetries);
             return results.ToDictionary(x => (object)x.Name, x => (object)x.Value);
+        }
+
+        public void HashesSet(string key, IDictionary<object, object> value)
+        {
+            var pairs = value.Select(x => new HashEntry(x.Key.ToRedis(), x.Value.ToRedis())).ToArray();
+            Retry(() =>
+                this.Database.HashSet(Key(key), pairs), defaultRetries);
         }
 
         public void HashesSet<T, TK>(string key, T fieldName, TK value)

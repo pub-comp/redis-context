@@ -142,6 +142,13 @@ namespace PubComp.RedisRepo
         #region Redis Hashes
 
         /// <summary>
+        /// Add or update new pairs to a specific key in Hashes data type
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value">Pairs of fields and values</param>
+        void HashesSet(string key, IDictionary<object, object> value);
+
+        /// <summary>
         /// Add or update new pair of field and value to a specific key in Hashes data type
         /// </summary>
         void HashesSet<T, TK>(string key, T fieldName, TK value);

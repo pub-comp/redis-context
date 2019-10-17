@@ -196,31 +196,31 @@ namespace PubComp.RedisRepo
 
         internal static RedisValue ToRedis<T>(this T value)
         {
-            if (typeof(T) == typeof(byte[]))
+            if (typeof(T) == typeof(byte[]) || value is byte[])
                 return (byte[])(object)value;
 
-            if (typeof(T) == typeof(string))
+            if (typeof(T) == typeof(string) || value is string)
                 return (string)(object)value;
 
-            if (typeof(T) == typeof(bool))
+            if (typeof(T) == typeof(bool) || value is bool)
                 return Convert.ToBoolean(value);
 
             if (typeof(T) == typeof(bool?))
                 return value != null ? Convert.ToBoolean(value) : (bool?)null;
 
-            if (typeof(T) == typeof(int))
+            if (typeof(T) == typeof(int) || value is int)
                 return Convert.ToInt32(value);
 
             if (typeof(T) == typeof(int?))
                 return value != null ? Convert.ToInt32(value) : (int?)null;
 
-            if (typeof(T) == typeof(double))
+            if (typeof(T) == typeof(double) || value is double)
                 return Convert.ToDouble(value);
 
             if (typeof(T) == typeof(double?))
                 return value != null ? Convert.ToDouble(value) : (double?)null;
 
-            if (typeof(T) == typeof(long))
+            if (typeof(T) == typeof(long) || value is long)
                 return Convert.ToInt64(value);
 
             if (typeof(T) == typeof(long?))

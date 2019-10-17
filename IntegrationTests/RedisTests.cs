@@ -721,6 +721,50 @@ namespace PubComp.RedisRepo.IntegrationTests
         #region Redis Hashes
 
         [TestMethod]
+        public void Hashes_SetMultiplePairs_Added()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var multiplePairs = new Dictionary<object, object>
+            {
+                { "ddd", true },
+                { (int)555, "abc" },
+                { 1L, 2D },
+                { (int?) 3, (bool?) true },
+                { "bla", (double?)2d }
+            };
+
+            //Act
+            redisContext.HashesSet(key, multiplePairs);
+
+            //Assert
+            var hashesContains = redisContext.HashesGetAll(key);
+            hashesContains.Should().Contain(multiplePairs);
+        }
+
+        /// <summary>
+        /// Fields or Values can not be nulls
+        /// </summary>
+        [TestMethod]
+        [ExpectedException(typeof(NotSupportedException))]
+        public void Hashes_SetInvalidMultiplePair_NotAdded()
+        {
+            //Arrange
+            const string key = "testHashesSet";
+            var multiplePairs = new Dictionary<object, object>
+            {
+                { "ddd", true },
+                { (int)555, "abc" },
+                { 1L, 2D },
+                { (int?) 456, (bool?) null },
+                { "bla", (double?)2d }
+            };
+
+            //Act
+            redisContext.HashesSet(key, multiplePairs);
+        }
+
+        [TestMethod]
         public void Hashes_SetWithStringFieldAndValue_Added()
         {
             //Arrange
