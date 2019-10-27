@@ -56,12 +56,13 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ConnectionFailedException))]
         [TestCategory("Transactional")]
         [TestCategory("Connection validation")]
         public void TestInvalidConnection()
         {
-            GetTestConnection(isValidConnection: false);
+            var exception = Assert.ThrowsException<ConnectionFailedException>(() => GetTestConnection(isValidConnection: false));
+            Assert.AreEqual("Failed connecting to Redis server - please check connection details", exception.Message);
+            
         }
 
         #region Simple set and get
