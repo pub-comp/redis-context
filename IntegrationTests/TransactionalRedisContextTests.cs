@@ -56,7 +56,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
 
         [TestMethod]
-        [ExpectedException(typeof(FailedToConnectException))]
+        [ExpectedException(typeof(ConnectionFailedException))]
         [TestCategory("Transactional")]
         [TestCategory("Connection validation")]
         public void TestInvalidConnection()

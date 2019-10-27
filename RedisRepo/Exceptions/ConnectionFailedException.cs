@@ -6,7 +6,7 @@ using System.Text;
 namespace PubComp.RedisRepo.Exceptions
 {
     [Serializable]
-    public class FailedToConnectException : ArgumentException
+    public class ConnectionFailedException : ArgumentException
     {
         //
         // For guidelines regarding the creation of new exception types, see
@@ -15,19 +15,19 @@ namespace PubComp.RedisRepo.Exceptions
         //    http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dncscol/html/csharp07192001.asp
         //
 
-        public FailedToConnectException()
+        public ConnectionFailedException()
         {
         }
 
-        public FailedToConnectException(string message) : base(message)
+        public ConnectionFailedException(string message) : base(message)
         {
         }
 
-        public FailedToConnectException(string message, Exception inner) : base(message, inner)
+        public ConnectionFailedException(string message, Exception inner) : base(message, inner)
         {
         }
 
-        protected FailedToConnectException(
+        protected ConnectionFailedException(
             SerializationInfo info,
             StreamingContext context) : base(info, context)
         {
