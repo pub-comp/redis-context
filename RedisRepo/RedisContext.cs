@@ -95,7 +95,7 @@ namespace PubComp.RedisRepo
 
                 if (!this.connections[i].IsConnected)
                 {
-                    throw new ConnectionFailedException("Failed connecting to Resdis server - please check connection details");
+                    throw new ConnectionFailedException();
                 }
             }
         }
