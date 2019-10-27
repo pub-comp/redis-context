@@ -16,21 +16,7 @@ namespace PubComp.RedisRepo.Exceptions
         //
 
         public ConnectionFailedException() 
-            : base("Failed connecting to Resdis server - please check connection details")
-        {
-        }
-
-        public ConnectionFailedException(string message) : base(message)
-        {
-        }
-
-        public ConnectionFailedException(string message, Exception inner) : base(message, inner)
-        {
-        }
-
-        protected ConnectionFailedException(
-            SerializationInfo info,
-            StreamingContext context) : base(info, context)
+            : base("Failed connecting to Redis server - please check connection details")
         {
         }
     }
