@@ -4,9 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using PubComp.RedisRepo.Exceptions;
+
 
 namespace PubComp.RedisRepo.IntegrationTests
 {
@@ -16,6 +17,7 @@ namespace PubComp.RedisRepo.IntegrationTests
         readonly string ns = "n1";
         readonly string host = "localhost";
         readonly int port = 6379;
+        readonly int port_invalid = 6111;
         readonly string password = null;
         readonly int dbId = 10;
         readonly Random random = new Random();
@@ -32,10 +34,10 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
 
 
-        private RedisContext GetTestConnection()
+        private RedisContext GetTestConnection(bool isValidConnection = true)
         {
             return new RedisContext(
-                            contextNamespace: ns, host: host, port: port,
+                            contextNamespace: ns, host: host, port: isValidConnection ? port : port_invalid,
                             password: password, db: dbId,
                             commandFlags: CommandFlags.None, defaultRetries: 5, totalConnections: 1);
         }
@@ -51,6 +53,15 @@ namespace PubComp.RedisRepo.IntegrationTests
             // delete all keys in current namespace, current db
             //var keys = RetryUtil.Retry(() => ctx.GetKeys("*"), 5);
             //RetryUtil.Retry(() => ctx.Delete(keys.ToArray()), 5);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(FailedToConnectException))]
+        [TestCategory("Transactional")]
+        [TestCategory("Connection validation")]
+        public void TestInvalidConnection()
+        {
+            GetTestConnection(isValidConnection: false);
         }
 
         #region Simple set and get

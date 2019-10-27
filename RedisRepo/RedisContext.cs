@@ -1,4 +1,5 @@
 ﻿using NLog;
+using PubComp.RedisRepo.Exceptions;
 using StackExchange.Redis;
 using System;
 using System.Collections;
@@ -91,6 +92,11 @@ namespace PubComp.RedisRepo
             {
                 this.connections[i] = ConnectionMultiplexer.Connect(options.RedisConfigurationOptions);
                 this.connections[i].PreserveAsyncOrder = false;
+
+                if (!this.connections[i].IsConnected)
+                {
+                    throw new FailedToConnectException("Failed connecting to Resdis server - please check connection details");
+                }
             }
         }
 
