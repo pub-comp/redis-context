@@ -10,7 +10,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <!--Inc Version & AssemblyFileVersion each version-->
-    <AssemblyFileVersion>5.2.1.0</AssemblyFileVersion>
+    <AssemblyFileVersion>5.2.0.0</AssemblyFileVersion>
     <Version>5.2.0</Version>
     <!--Don't inc AssemblyVersion for minor versions!-->
     <AssemblyVersion>5.0.0.0</AssemblyVersion>
