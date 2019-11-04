@@ -1,10 +1,11 @@
-﻿using System;
+﻿using NLog;
+using PubComp.RedisRepo.Exceptions;
+using StackExchange.Redis;
+using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using NLog;
-using StackExchange.Redis;
 
 namespace PubComp.RedisRepo
 {
@@ -91,10 +92,13 @@ namespace PubComp.RedisRepo
             {
                 this.connections[i] = ConnectionMultiplexer.Connect(options.RedisConfigurationOptions);
                 this.connections[i].PreserveAsyncOrder = false;
+
+                if (!this.connections[i].IsConnected)
+                {
+                    throw new ConnectionFailedException();
+                }
             }
         }
-
-
 
         #region Properties
 
@@ -350,10 +354,10 @@ namespace PubComp.RedisRepo
                 this.Database.StringSet(Key(key), value, expiry: expiry, flags: commandFlags), defaultRetries);
         }
 
-        public bool Set(string key, string value, When when, TimeSpan? expiry = null)
+        public bool Set(string key, string value, Enums.When when, TimeSpan? expiry = null)
         {
             return Retry(() =>
-                this.Database.StringSet(Key(key), value, expiry: expiry, when: when, flags: commandFlags), defaultRetries);
+                this.Database.StringSet(Key(key), value, expiry: expiry, when: when.ToSE(), flags: commandFlags), defaultRetries);
         }
 
         public void Set(string key, bool value, TimeSpan? expiry = null)
@@ -473,6 +477,100 @@ namespace PubComp.RedisRepo
         #endregion
 
         #region Redis Sets
+
+        public bool SetAdd<T>(string key, T value)
+        {
+            var redisValue = value.ToRedis();
+
+            var result = Retry(() =>
+                this.Database.SetAdd(
+                    Key(key), redisValue, commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        public long SetAdd<T>(string key, T[] values)
+        {
+            var redisValues = values?.Select(val => val.ToRedis()).ToArray();
+
+            var result = Retry(() =>
+                this.Database.SetAdd(
+                    Key(key), redisValues, commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        public T[] SetGetItems<T>(string key, Func<object, T> redisValueConverter)
+        {
+            var results = Retry(() =>
+                this.Database.SetMembers(Key(key), commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public T[] SetsUnion<T>(string[] keys, Func<object, T> redisValueConverter)
+        {
+            var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
+
+            var results = Retry(() =>
+                this.Database.SetCombine(
+                    SetOperation.Union, redisKeys, commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public T[] SetsIntersect<T>(string[] keys, Func<object, T> redisValueConverter)
+        {
+            var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
+
+            var results = Retry(() =>
+                this.Database.SetCombine(
+                    SetOperation.Intersect, redisKeys, commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public T[] SetsDiff<T>(string[] keys, Func<object, T> redisValueConverter)
+        {
+            var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
+
+            var results = Retry(() =>
+                this.Database.SetCombine(
+                    SetOperation.Difference, redisKeys, commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public bool SetRemove<T>(string key, T value)
+        {
+            var redisValue = value.ToRedis();
+
+            var result = Retry(() =>
+                this.Database.SetRemove(
+                    Key(key), redisValue, commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        public long SetRemove<T>(string key, T[] values)
+        {
+            var redisValues = values?.Select(val => val.ToRedis()).ToArray();
+
+            var result = Retry(() =>
+                this.Database.SetRemove(
+                    Key(key), redisValues, commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        public long SetLength(string key)
+        {
+            var result = Retry(() =>
+                this.Database.SetLength(Key(key), commandFlags), defaultRetries);
+
+            return result;
+        }
+
         public void AddToSet(string key, string[] values)
         {
             Retry(() => this.Database.SetAdd(Key(key), values.ToRedisValueArray(), flags: commandFlags), defaultRetries);
@@ -573,6 +671,112 @@ namespace PubComp.RedisRepo
 
         }
         #endregion
+
+        #endregion
+
+        #region Redis Hashes
+
+        public bool HashesTryGetField<T, TK>(string key, T fieldName, out TK value)
+        {
+            value = default(TK);
+
+            var redisValue = Retry(() =>
+                this.Database.HashGet(Key(key), fieldName.ToRedis()), defaultRetries);
+
+            var success = false;
+
+            if (typeof(TK) == typeof(string))
+            {
+                value = (TK)(object)RedisValueConverter.ToString(redisValue);
+                success = true;
+            }
+
+            else if (typeof(TK) == typeof(int))
+            {
+                value = (TK)(object)RedisValueConverter.ToInt(redisValue);
+                success = true;
+            }
+
+            else if (typeof(TK) == typeof(long))
+            {
+                value = (TK)(object)RedisValueConverter.ToLong(redisValue);
+                success = true;
+            }
+
+            else if (typeof(TK) == typeof(double))
+            {
+                value = (TK)(object)RedisValueConverter.ToDouble(redisValue);
+                success = true;
+            }
+
+            else if (typeof(TK) == typeof(bool))
+            {
+                value = (TK)(object)RedisValueConverter.ToBool(redisValue);
+                success = true;
+            }
+
+            return success;
+        }
+
+        public IDictionary<object, object> HashesGetAll(string key)
+        {
+            var results = Retry(() =>
+                this.Database.HashGetAll(Key(key)), defaultRetries);
+            return results.ToDictionary(x => (object)x.Name, x => (object)x.Value);
+        }
+
+        public void HashesSet(string key, IDictionary<object, object> value)
+        {
+            var pairs = value.Select(x => new HashEntry(x.Key.ToRedis(), x.Value.ToRedis())).ToArray();
+            Retry(() =>
+                this.Database.HashSet(Key(key), pairs), defaultRetries);
+        }
+
+        public void HashesSet<T, TK>(string key, T fieldName, TK value)
+        {
+            Retry(() =>
+                this.Database.HashSet(Key(key), fieldName.ToRedis(), value.ToRedis()), defaultRetries);
+        }
+
+        public bool HashesDeleteField(string key, string fieldName)
+        {
+            return Retry(() =>
+                this.Database.HashDelete(Key(key), fieldName), defaultRetries);
+        }
+
+        public bool HashesDeleteField(string key, bool fieldName)
+        {
+            return Retry(() =>
+                this.Database.HashDelete(Key(key), fieldName), defaultRetries);
+        }
+
+        public bool HashesDeleteField(string key, int fieldName)
+        {
+            return Retry(() =>
+                this.Database.HashDelete(Key(key), fieldName), defaultRetries);
+        }
+
+        public bool HashesDeleteField(string key, long fieldName)
+        {
+            return Retry(() =>
+                this.Database.HashDelete(Key(key), fieldName), defaultRetries);
+        }
+
+        public bool HashesDeleteField(string key, double fieldName)
+        {
+            return Retry(() =>
+                 this.Database.HashDelete(Key(key), fieldName), defaultRetries);
+        }
+
+        /// <summary>
+        /// Get the number of fields in a hash
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public long HashesLength(string key)
+        {
+            return Retry(() => this.Database.HashLength(Key(key)), defaultRetries);
+        }
 
         #endregion
 
@@ -719,10 +923,39 @@ namespace PubComp.RedisRepo
         /// <returns></returns>
         public bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl)
         {
-            var isNew = this.Set(lockObjectName, lockerName, when: When.NotExists, expiry: lockTtl);
-            if (isNew) return true;
 
-            return this.TryGet(lockObjectName, out string currentLockerName) && currentLockerName == lockerName;
+            const string lockScript = @"local isNew = redis.call('SETNX', @Key1, @StringArg1)
+if isNew == 1 then 
+    redis.call('EXPIRE', @Key1, @IntArg1)
+    return true
+end
+
+local lockOwner = redis.call('GET', @Key1)
+if lockOwner ~= nil and lockOwner == @StringArg1 then
+    redis.call('EXPIRE', @Key1, @IntArg1)
+    return true
+end
+
+return false
+";
+
+            var args = this.CreateScriptKeyAndArguments();
+            args.Key1 = lockObjectName;
+            args.StringArg1 = lockerName;
+            args.IntArg1 = (int)lockTtl.TotalSeconds;
+
+            return this.RunScriptBool(lockScript, args);
+        }
+
+        public void ReleaseDistributedLock(string lockObjectName, string lockerName)
+        {
+            var key = Key(lockObjectName);
+            var tran = this.Database.CreateTransaction();
+            var condResult = tran.AddCondition(Condition.StringEqual(key, lockerName));
+            var task = tran.KeyDeleteAsync(key, CommandFlags.None);
+            var execResult = tran.Execute();
+
+
         }
         #endregion
 
@@ -751,9 +984,6 @@ namespace PubComp.RedisRepo
 
         #region Lua Scripting
 
-        /// <summary>
-        /// Return a RedisScriptKeysAndArguments instance that can be passed later alongside a script
-        /// </summary>
         public RedisScriptKeysAndArguments CreateScriptKeyAndArguments()
         {
             return new RedisScriptKeysAndArguments(Key);
@@ -779,6 +1009,19 @@ namespace PubComp.RedisRepo
         {
             var result = Retry(() => this.RunScriptInternal(script, keysAndParameters), defaultRetries);
             return (string)result;
+        }
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as bool</returns>
+        public bool RunScriptBool(string script, RedisScriptKeysAndArguments keysAndParameters)
+        {
+            var result = Retry(() => this.RunScriptInternal(script, keysAndParameters), defaultRetries);
+
+            return (bool)result;
         }
 
         /// <summary>
@@ -891,5 +1134,141 @@ namespace PubComp.RedisRepo
                 conn?.Dispose();
             }
         }
+
+        #region Redis Sorted Sets
+
+        #region AddToSortedSet
+
+        public bool AddToSortedSet<T>(
+            string key, T value, double score, Enums.When when = Enums.When.Always)
+        {
+            var result = Retry(() =>
+                this.Database.SortedSetAdd(
+                    Key(key), value.ToRedis(), score, when.ToSE(), commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        #endregion
+
+        #region AddToSortedSet[]
+
+        public long SortedSetAdd<T>(
+            string key, (T value, double score)[] values,
+            Enums.When when = Enums.When.Always)
+        {
+            var sortedSetEntries = values?.Select(val =>
+                new SortedSetEntry(val.value.ToRedis(), val.score)).ToArray();
+
+            var result = Retry(() =>
+                this.Database.SortedSetAdd(
+                    Key(key), sortedSetEntries, when.ToSE(), commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        #endregion
+
+        public long SortedSetGetLength(
+            string key, double min = double.NegativeInfinity,
+            double max = double.PositiveInfinity, Enums.Exclude exclude = Enums.Exclude.None)
+        {
+            return Retry(() =>
+                this.Database.SortedSetLength(
+                    Key(key), min, max, exclude.ToSE(), commandFlags), defaultRetries);
+        }
+
+        #region GetRange
+
+        public T[] SortedSetGetRangeByScore<T>(
+            string key, Func<object, T> redisValueConverter,
+            double start = double.NegativeInfinity, double end = double.PositiveInfinity, Enums.SortOrder order = Enums.SortOrder.Ascending)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRangeByScore(
+                    Key(key), start, end, order: order.ToSE(), flags: commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public T[] SortedSetGetRangeByRank<T>(
+            string key, Func<object, T> redisValueConverter,
+            long start = 0, long end = -1, Enums.SortOrder order = Enums.SortOrder.Ascending)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRangeByRank(
+                    Key(key), start, end, order.ToSE(), commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public List<(T value, double score)> SortedSetGetRangeByScoreWithScores<T>(
+            string key, Func<object, T> redisValueConverter,
+            double start = double.NegativeInfinity,
+            double end = double.PositiveInfinity, Enums.SortOrder order = Enums.SortOrder.Ascending)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRangeByScoreWithScores(
+                    Key(key), start, end, order: order.ToSE(), flags: commandFlags), defaultRetries);
+
+            return results.Select((SortedSetEntry r) => (redisValueConverter(r.Element), r.Score)).ToList();
+        }
+
+        public List<(T value, double score)> SortedSetGetRangeByRankWithScores<T>(
+            string key, Func<object, T> redisValueConverter,
+            long start = 0, long end = -1, Enums.SortOrder order = Enums.SortOrder.Ascending)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRangeByRankWithScores(
+                    Key(key), start, end, order.ToSE(), commandFlags), defaultRetries);
+
+            return results.Select((SortedSetEntry r) => (redisValueConverter(r.Element), r.Score)).ToList();
+        }
+
+        #endregion
+
+        #region Remove
+
+        public bool SortedSetRemove<T>(string key, T value)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRemove(
+                    Key(key), value.ToRedis(), commandFlags), defaultRetries);
+
+            return results;
+        }
+
+        public long SortedSetRemove<T>(string key, T[] values)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRemove(
+                    Key(key), values.ToRedisArray(), commandFlags), defaultRetries);
+
+            return results;
+        }
+
+        public long SortedSetRemoveRangeByScore(
+            string key, double start, double end, Enums.Exclude exclude = Enums.Exclude.None)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRemoveRangeByScore(
+                    Key(key), start, end, exclude.ToSE(), commandFlags), defaultRetries);
+
+            return results;
+        }
+
+        public long SortedSetRemoveRangeByRank(
+            string key, long start, long end)
+        {
+            var results = Retry(() =>
+                this.Database.SortedSetRemoveRangeByRank(
+                    Key(key), start, end, commandFlags), defaultRetries);
+
+            return results;
+        }
+
+        #endregion
+
+        #endregion
     }
 }

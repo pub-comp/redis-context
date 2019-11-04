@@ -1,5 +1,4 @@
-﻿using PubComp.RedisRepo.Enums;
-using StackExchange.Redis;
+﻿using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -505,6 +504,7 @@ namespace PubComp.RedisRepo
         #endregion
 
         #region Sorted Set Operation
+
         /// <summary>
         /// Perform set operations on SortedSet values
         /// Records the number of items in the destination set.
@@ -518,99 +518,133 @@ namespace PubComp.RedisRepo
             string destinationKey,
             string[] sourceKeys,
             double[] weights = null,
-            Enums.SetOperations op = Enums.SetOperations.Union,
-            Enums.SetOPerationAggregations aggregation = Enums.SetOPerationAggregations.Sum)
+            Enums.SetOperation op = Enums.SetOperation.Union,
+            Enums.SetOperationAggregation aggregation = Enums.SetOperationAggregation.Sum)
         {
-
             Record(
-                        this.contextTransaction.SortedSetCombineAndStoreAsync(
-                            op.ToRedisOperation(),
-                            Key(destinationKey),
-                            sourceKeys.Select((k) => Key(k)).ToArray(),
-                            weights: weights,
-                            aggregate: aggregation.ToRedisAggregate(),
-                            flags: commandFlags)
-                    );
-
+                this.contextTransaction.SortedSetCombineAndStoreAsync(
+                    op.ToSE(),
+                    Key(destinationKey),
+                    sourceKeys.Select((k) => Key(k)).ToArray(),
+                    weights: weights,
+                    aggregate: aggregation.ToSE(),
+                    flags: commandFlags)
+                );
         }
 
         #endregion
 
         #region Sorted Set Get Range by Rank 
-        public void SortedSetGetRangeByRankString(string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrders sortOrder = SortOrders.Ascending)
+
+        public void SortedSetGetRangeByRankString(
+            string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToRedisOrder(), flags: commandFlags);
+            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(
+                Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToSE(), flags: commandFlags);
+
             Record(t.ContinueWith((sse) => sse.Result.Select((s) => s.Element.ToStringDefault()).ToArray()));
         }
 
-        public void SortedSetGetRangeByRankInt(string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRangeByRankInt(
+            string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToRedisOrder(), flags: commandFlags);
+            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(
+                Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToSE(), flags: commandFlags);
+
             Record(t.ContinueWith((sse) => sse.Result.Select((s) => s.Element.ToIntDefault()).ToArray()));
         }
 
-        public void SortedSetGetRangeByRankDouble(string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRangeByRankDouble(
+            string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToRedisOrder(), flags: commandFlags);
+            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(
+                Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToSE(), flags: commandFlags);
+
             Record(t.ContinueWith((sse) => sse.Result.Select((s) => s.Element.ToDoubleDefault()).ToArray()));
         }
         
-        public void SortedSetGetRangeByRankLong(string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRangeByRankLong(
+            string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToRedisOrder(), flags: commandFlags);
+            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(
+                Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToSE(), flags: commandFlags);
+
             Record(t.ContinueWith((sse) => sse.Result.Select((s) => s.Element.ToLongDefault()).ToArray()));
         }
         
-        public void SortedSetGetRangeByRankBool(string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRangeByRankBool(
+            string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToRedisOrder(), flags: commandFlags);
+            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(
+                Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToSE(), flags: commandFlags);
+
             Record(t.ContinueWith((sse) => sse.Result.Select((s) => s.Element.ToBoolDefault()).ToArray()));
         }
 
-        public void SortedSetGetRangeByRankByteArray(string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRangeByRankByteArray(
+            string key, long rangeStart = 0, long rangeEnd = -1, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToRedisOrder(), flags: commandFlags);
+            var t = this.contextTransaction.SortedSetRangeByRankWithScoresAsync(
+                Key(key), start: rangeStart, stop: rangeEnd, order: sortOrder.ToSE(), flags: commandFlags);
+
             Record(t.ContinueWith((sse) => sse.Result.Select((s) => (byte[])s.Element).ToArray()));
         }
-
 
         #endregion
 
         #region Sorted Set Get Range by Score
-        public void SortedSetGetRangeByScoreString(string key, double start = double.NegativeInfinity, double stop = double.PositiveInfinity, Enums.SortOrders sortOrder = SortOrders.Ascending, long skip = 0, long take = -1)
+
+        public void SortedSetGetRangeByScoreString(
+            string key, double start = double.NegativeInfinity,
+            double stop = double.PositiveInfinity, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending,
+            long skip = 0, long take = -1)
         {
-            var t = this.contextTransaction.SortedSetRangeByScoreWithScoresAsync(Key(key), start: start, stop: stop, exclude: Exclude.None,
-                order: sortOrder.ToRedisOrder(), skip: skip, take: take, flags: commandFlags);
+            var t = this.contextTransaction.SortedSetRangeByScoreWithScoresAsync(
+                Key(key), start: start, stop: stop, exclude: Exclude.None,
+                order: sortOrder.ToSE(), skip: skip, take: take, flags: commandFlags);
 
             Record(t.ContinueWith((sse) => sse.Result.Select((s) => s.Element.ToStringDefault()).ToArray()));
         }
 
-        public void SortedSetGetRangeByScoreInt(string key, double start = double.NegativeInfinity, double stop = double.PositiveInfinity, Enums.SortOrders sortOrder = SortOrders.Ascending, long skip = 0, long take = -1)
+        public void SortedSetGetRangeByScoreInt(
+            string key,
+            double start = double.NegativeInfinity, double stop = double.PositiveInfinity,
+            Enums.SortOrder sortOrder = Enums.SortOrder.Ascending, long skip = 0, long take = -1)
         {
-            var t = this.contextTransaction.SortedSetRangeByScoreWithScoresAsync(Key(key), start: start, stop: stop, exclude: Exclude.None, order: sortOrder.ToRedisOrder(), skip: skip, take: take, flags: commandFlags);
+            var t = this.contextTransaction.SortedSetRangeByScoreWithScoresAsync(
+                Key(key), start: start, stop: stop,
+                exclude: Exclude.None, order: sortOrder.ToSE(),
+                skip: skip, take: take, flags: commandFlags);
+
             Record(t.ContinueWith((sse) => sse.Result.Select((s) => s.Element.ToIntDefault()).ToArray()));
         }
 
-        public void SortedSetGetRangeByScoreDouble(string key, double start = double.NegativeInfinity, double stop = double.PositiveInfinity, Enums.SortOrders sortOrder = SortOrders.Ascending, long skip = 0, long take = -1)
+        public void SortedSetGetRangeByScoreDouble(
+            string key, double start = double.NegativeInfinity, double stop = double.PositiveInfinity, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending, long skip = 0, long take = -1)
         {
-            var t = this.contextTransaction.SortedSetRangeByScoreWithScoresAsync(Key(key), start: start, stop: stop, exclude: Exclude.None,
-                order: sortOrder.ToRedisOrder(), skip: skip, take: take, flags: commandFlags);
+            var t = this.contextTransaction.SortedSetRangeByScoreWithScoresAsync(
+                Key(key), start: start, stop: stop, exclude: Exclude.None,
+                order: sortOrder.ToSE(), skip: skip, take: take, flags: commandFlags);
 
             Record(t.ContinueWith((sse) => sse.Result.Select((s) => s.Element.ToDoubleDefault()).ToArray()));
         }
         
-        public void SortedSetGetRangeByScoreLong(string key, double start = double.NegativeInfinity, double stop = double.PositiveInfinity, Enums.SortOrders sortOrder = SortOrders.Ascending, long skip = 0, long take = -1)
+        public void SortedSetGetRangeByScoreLong(
+            string key, double start = double.NegativeInfinity, double stop = double.PositiveInfinity, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending, long skip = 0, long take = -1)
         {
-            var t = this.contextTransaction.SortedSetRangeByScoreWithScoresAsync(Key(key), start: start, stop: stop, exclude: Exclude.None,
-                order: sortOrder.ToRedisOrder(), skip: skip, take: take, flags: commandFlags);
+            var t = this.contextTransaction.SortedSetRangeByScoreWithScoresAsync(
+                Key(key), start: start, stop: stop, exclude: Exclude.None,
+                order: sortOrder.ToSE(), skip: skip, take: take, flags: commandFlags);
 
             Record(t.ContinueWith((sse) => sse.Result.Select((s) => s.Element.ToLongDefault()).ToArray()));
         }
 
-        public void SortedSetGetRangeByScoreBool(string key, double start = double.NegativeInfinity, double stop = double.PositiveInfinity, Enums.SortOrders sortOrder = SortOrders.Ascending, long skip = 0, long take = -1)
+        public void SortedSetGetRangeByScoreBool(
+            string key, double start = double.NegativeInfinity, double stop = double.PositiveInfinity, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending, long skip = 0, long take = -1)
         {
-            var t = this.contextTransaction.SortedSetRangeByScoreWithScoresAsync(Key(key), start: start, stop: stop, exclude: Exclude.None,
-                order: sortOrder.ToRedisOrder(), skip: skip, take: take, flags: commandFlags);
+            var t = this.contextTransaction.SortedSetRangeByScoreWithScoresAsync(
+                Key(key), start: start, stop: stop, exclude: Exclude.None,
+                order: sortOrder.ToSE(), skip: skip, take: take, flags: commandFlags);
 
             Record(t.ContinueWith((sse) => sse.Result.Select((s) => s.Element.ToBoolDefault()).ToArray()));
         }
@@ -618,51 +652,60 @@ namespace PubComp.RedisRepo
         #endregion
 
         #region Sorted Set Get Rank for Value
-        public void SortedSetGetRankForValue(string key, string value, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRankForValue(
+            string key, string value, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToRedisOrder()));
+            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToSE()));
         }
 
-        public void SortedSetGetRankForValue(string key, bool value, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRankForValue(
+            string key, bool value, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
             var intValue = value ? -1 : 0;
-            Record(this.contextTransaction.SortedSetRankAsync(Key(key), intValue, sortOrder.ToRedisOrder()));
+            Record(this.contextTransaction.SortedSetRankAsync(Key(key), intValue, sortOrder.ToSE()));
         }
 
-        public void SortedSetGetRankForValue(string key, bool? value, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRankForValue(
+            string key, bool? value, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
             var intValue = value.HasValue ? (value.Value ? -1 : 0) : (int?)null;
-            Record(this.contextTransaction.SortedSetRankAsync(Key(key), intValue, sortOrder.ToRedisOrder()));
+            Record(this.contextTransaction.SortedSetRankAsync(Key(key), intValue, sortOrder.ToSE()));
         }
 
-        public void SortedSetGetRankForValue(string key, double value, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRankForValue(
+            string key, double value, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToRedisOrder()));
+            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToSE()));
         }
 
-        public void SortedSetGetRankForValue(string key, double? value, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRankForValue(
+            string key, double? value, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToRedisOrder()));
+            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToSE()));
         }
 
-        public void SortedSetGetRankForValue(string key, int value, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRankForValue(
+            string key, int value, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToRedisOrder()));
+            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToSE()));
         }
 
-        public void SortedSetGetRankForValue(string key, int? value, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRankForValue(
+            string key, int? value, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToRedisOrder()));
+            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToSE()));
         }
 
-        public void SortedSetGetRankForValue(string key, long value, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRankForValue(
+            string key, long value, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToRedisOrder()));
+            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToSE()));
         }
 
-        public void SortedSetGetRankForValue(string key, long? value, Enums.SortOrders sortOrder = SortOrders.Ascending)
+        public void SortedSetGetRankForValue(
+            string key, long? value, Enums.SortOrder sortOrder = Enums.SortOrder.Ascending)
         {
-            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToRedisOrder()));
+            Record(this.contextTransaction.SortedSetRankAsync(Key(key), value, sortOrder.ToSE()));
         }
 
         #endregion
@@ -682,9 +725,5 @@ namespace PubComp.RedisRepo
         #endregion
 
         #endregion
-
-
-
-
     }
 }
