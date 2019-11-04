@@ -2,8 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Reflection;
 
 namespace PubComp.RedisRepo
 {
@@ -176,6 +175,93 @@ namespace PubComp.RedisRepo
             var result = ToInt(redisValue, out int intValue);
             value = intValue != 0;
             return result;
+        }
+
+        internal static bool ToBinary(this RedisValue redisValue, out byte[] value)
+        {
+            if (redisValue.IsNull)
+            {
+                value = null;
+                return false;
+            }
+
+            value = (byte[])redisValue;
+            return true;
+        }
+
+        internal static byte[] ToBinaryDefault(this RedisValue redisValue)
+        {
+            return (redisValue.IsNull ? null : (byte[])redisValue);
+        }
+
+        internal static RedisValue ToRedis<T>(this T value)
+        {
+            if (typeof(T) == typeof(byte[]) || value is byte[])
+                return (byte[])(object)value;
+
+            if (typeof(T) == typeof(string) || value is string)
+                return (string)(object)value;
+
+            if (typeof(T) == typeof(bool) || value is bool)
+                return Convert.ToBoolean(value);
+
+            if (typeof(T) == typeof(bool?))
+                return value != null ? Convert.ToBoolean(value) : (bool?)null;
+
+            if (typeof(T) == typeof(int) || value is int)
+                return Convert.ToInt32(value);
+
+            if (typeof(T) == typeof(int?))
+                return value != null ? Convert.ToInt32(value) : (int?)null;
+
+            if (typeof(T) == typeof(double) || value is double)
+                return Convert.ToDouble(value);
+
+            if (typeof(T) == typeof(double?))
+                return value != null ? Convert.ToDouble(value) : (double?)null;
+
+            if (typeof(T) == typeof(long) || value is long)
+                return Convert.ToInt64(value);
+
+            if (typeof(T) == typeof(long?))
+                return value != null ? Convert.ToInt64(value) : (long?)null;
+
+            throw new NotSupportedException(typeof(T).FullName);
+        }
+
+        internal static RedisValue[] ToRedisArray<T>(this IEnumerable<T> values)
+        {
+            if (typeof(T) == typeof(byte[]))
+                return values.Select(v => (RedisValue)(byte[])(object)v).ToArray();
+
+            if (typeof(T) == typeof(string))
+                return values.OfType<string>().Select(v => (RedisValue)v).ToArray();
+
+            if (typeof(T) == typeof(bool))
+                return values.OfType<bool>().Select(v => (RedisValue)v).ToArray();
+
+            if (typeof(T) == typeof(bool?))
+                return values.OfType<bool?>().Select(v => (RedisValue)v).ToArray();
+
+            if (typeof(T) == typeof(int))
+                return values.OfType<int>().Select(v => (RedisValue)v).ToArray();
+
+            if (typeof(T) == typeof(int?))
+                return values.OfType<int?>().Select(v => (RedisValue)v).ToArray();
+
+            if (typeof(T) == typeof(double))
+                return values.OfType<double>().Select(v => (RedisValue)v).ToArray();
+
+            if (typeof(T) == typeof(double?))
+                return values.OfType<double?>().Select(v => (RedisValue)v).ToArray();
+
+            if (typeof(T) == typeof(long))
+                return values.OfType<long>().Select(v => (RedisValue)v).ToArray();
+
+            if (typeof(T) == typeof(long?))
+                return values.OfType<long?>().Select(v => (RedisValue)v).ToArray();
+
+            throw new NotSupportedException(typeof(T).FullName);
         }
     }
 }

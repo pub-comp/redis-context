@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using StackExchange.Redis;
 
@@ -24,7 +25,7 @@ namespace PubComp.RedisRepo
         double Increment(string key, double value);
         long Increment(string key, long value);
         void Set(string key, bool value, TimeSpan? expiry = null);
-        bool Set(string key, string value, When when, TimeSpan? expiry = null);
+        bool Set(string key, string value, Enums.When when, TimeSpan? expiry = null);
         void Set(string key, bool? value, TimeSpan? expiry = null);
         void Set(string key, double value, TimeSpan? expiry = null);
         void Set(string key, double? value, TimeSpan? expiry = null);
@@ -72,8 +73,26 @@ namespace PubComp.RedisRepo
         string[] GetList(string key, long start = 0, long stop = -1);
 
         #endregion
-        
+
         #region Redis Sets
+
+        bool SetAdd<T>(string key, T value);
+
+        long SetAdd<T>(string key, T[] values);
+
+        bool SetRemove<T>(string key, T value);
+
+        long SetRemove<T>(string key, T[] values);
+
+        long SetLength(string key);
+
+        T[] SetGetItems<T>(string key, Func<object, T> redisValueConverter);
+
+        T[] SetsUnion<T>(string[] keys, Func<object, T> redisValueConverter);
+
+        T[] SetsIntersect<T>(string[] keys, Func<object, T> redisValueConverter);
+
+        T[] SetsDiff<T>(string[] keys, Func<object, T> redisValueConverter);
 
         void AddToSet(string key, string[] values);
 
@@ -118,6 +137,43 @@ namespace PubComp.RedisRepo
 
         bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl);
 
+        void ReleaseDistributedLock(string lockObjectName, string lockerName);
+
+        #endregion
+
+        #region Redis Hashes
+
+        /// <summary>
+        /// Add or update new pairs to a specific key in Hashes data type
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value">Pairs of fields and values</param>
+        void HashesSet(string key, IDictionary<object, object> value);
+
+        /// <summary>
+        /// Add or update new pair of field and value to a specific key in Hashes data type
+        /// </summary>
+        void HashesSet<T, TK>(string key, T fieldName, TK value);
+
+        bool HashesTryGetField<T, TK>(string key, T fieldName, out TK value);
+
+        IDictionary<object, object> HashesGetAll(string key);
+
+        bool HashesDeleteField(string key, string fieldName);
+
+        bool HashesDeleteField(string key, bool fieldName);
+
+        bool HashesDeleteField(string key, int fieldName);
+
+        bool HashesDeleteField(string key, long fieldName);
+
+        bool HashesDeleteField(string key, double fieldName);
+
+        /// <summary>
+        /// Returns the number of fields in the Hashes data type for a specific key
+        /// </summary>
+        long HashesLength(string key);
+
         #endregion
 
         #region Lua Scripting
@@ -141,6 +197,14 @@ namespace PubComp.RedisRepo
         /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
         /// <returns>result as string</returns>
         string RunScriptString(string script, RedisScriptKeysAndArguments keysAndParameters);
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as bool</returns>
+        bool RunScriptBool(string script, RedisScriptKeysAndArguments keysAndParameters);
 
         /// <summary>
         /// Run a lua script against the connected redis instance
@@ -181,6 +245,65 @@ namespace PubComp.RedisRepo
         /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
         /// <returns>result as string[]</returns>
         string[] RunScriptStringArray(string script, RedisScriptKeysAndArguments keysAndParameters);
+
+        #endregion
+
+        #region Redis Sorted Sets
+
+        #region AddToSortedSet
+
+        bool AddToSortedSet<T>(
+            string key, T value, double score, Enums.When when = Enums.When.Always);
+
+        #endregion
+
+        #region AddToSortedSet[]
+
+        long SortedSetAdd<T>(
+            string key, (T value, double score)[] values,
+            Enums.When when = Enums.When.Always);
+
+        #endregion
+
+        long SortedSetGetLength(
+            string key, double min = double.NegativeInfinity,
+            double max = double.PositiveInfinity, Enums.Exclude exclude = Enums.Exclude.None);
+
+        #region GetRange
+
+        T[] SortedSetGetRangeByScore<T>(
+            string key, Func<object, T> redisValueConverter,
+            double start = double.NegativeInfinity, double end = double.PositiveInfinity,
+            Enums.SortOrder order = Enums.SortOrder.Ascending);
+
+        T[] SortedSetGetRangeByRank<T>(
+            string key, Func<object, T> redisValueConverter,
+            long start = 0, long end = -1, Enums.SortOrder order = Enums.SortOrder.Ascending);
+
+        List<(T value, double score)> SortedSetGetRangeByScoreWithScores<T>(
+            string key, Func<object, T> redisValueConverter,
+            double start = double.NegativeInfinity,
+            double end = double.PositiveInfinity, Enums.SortOrder order = Enums.SortOrder.Ascending);
+
+        List<(T value, double score)> SortedSetGetRangeByRankWithScores<T>(
+            string key, Func<object, T> redisValueConverter,
+            long start = 0, long end = -1, Enums.SortOrder order = Enums.SortOrder.Ascending);
+
+        #endregion
+
+        #region Remove
+
+        bool SortedSetRemove<T>(string key, T value);
+
+        long SortedSetRemove<T>(string key, T[] values);
+
+        long SortedSetRemoveRangeByScore(
+            string key, double start, double end, Enums.Exclude exclude = Enums.Exclude.None);
+
+        long SortedSetRemoveRangeByRank(
+            string key, long start, long end);
+
+        #endregion
 
         #endregion
     }
