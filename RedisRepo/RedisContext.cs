@@ -875,6 +875,15 @@ namespace PubComp.RedisRepo
 
         #endregion
 
+        #region Exists
+
+        public bool Exists(string key)
+        {
+            return Retry(() => this.Database.KeyExists(Key(key), flags: commandFlags), defaultRetries);
+        }
+
+        #endregion
+
         #region TimeToLive
 
         public TimeSpan? GetTimeToLive(string key)

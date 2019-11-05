@@ -181,6 +181,22 @@ namespace PubComp.RedisRepo.IntegrationTests
 
         #endregion
 
+        #region Exists
+
+        [TestMethod]
+        public void TestExists()
+        {
+            var existingKey = $"{TestContext.TestName}_Exists";
+            var notExistingKey = $"{TestContext.TestName}_NotExists";
+            Set(existingKey, "123");
+
+            Assert.IsTrue(redisContext.Exists(existingKey));
+            Assert.IsFalse(redisContext.Exists(notExistingKey));
+        }
+
+        #endregion
+
+
         #region TTL
 
         [TestMethod]
