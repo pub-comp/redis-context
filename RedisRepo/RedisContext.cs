@@ -882,11 +882,6 @@ namespace PubComp.RedisRepo
             return Retry(() => this.Database.KeyExists(Key(key), flags: commandFlags), defaultRetries);
         }
 
-        public long MultipleExist(string[] keys)
-        {
-            return Retry(() => this.Database.KeyExists(keys.Select(k => (RedisKey)Key(k)).ToArray(), flags: commandFlags), defaultRetries);
-        }
-
         #endregion
 
         #region TimeToLive

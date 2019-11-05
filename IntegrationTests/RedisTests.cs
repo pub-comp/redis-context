@@ -194,24 +194,6 @@ namespace PubComp.RedisRepo.IntegrationTests
             Assert.IsFalse(redisContext.Exists(notExistingKey));
         }
 
-        [TestMethod]
-        public void TestMultipleExist()
-        {
-            var existingKey1 = $"{TestContext.TestName}_Exists1";
-            var existingKey2 = $"{TestContext.TestName}_Exists2";
-            var notExistingKey1 = $"{TestContext.TestName}_NotExists1";
-            var notExistingKey2 = $"{TestContext.TestName}_NotExists2";
-            Set(existingKey1, "123");
-            Set(existingKey2, "123");
-
-            Assert.AreEqual(0, redisContext.MultipleExist(new[] { notExistingKey1 }));
-            Assert.AreEqual(1, redisContext.MultipleExist(new[] { existingKey1 }));
-            Assert.AreEqual(1, redisContext.MultipleExist(new[] { existingKey1, notExistingKey1 }));
-            Assert.AreEqual(0, redisContext.MultipleExist(new[] { notExistingKey1, notExistingKey2 }));
-            Assert.AreEqual(2, redisContext.MultipleExist(new[] { existingKey1, existingKey2 }));
-            Assert.AreEqual(2, redisContext.MultipleExist(new[] { existingKey1, existingKey2, notExistingKey1, notExistingKey2 }));
-        }
-
         #endregion
 
 

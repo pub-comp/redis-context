@@ -22,7 +22,6 @@ namespace PubComp.RedisRepo
         void Delete(string key);
         IEnumerable<string> GetKeys(string pattern = null);
         bool Exists(string key);
-        long MultipleExist(string[] keys);
         TimeSpan? GetTimeToLive(string key);
         double Increment(string key, double value);
         long Increment(string key, long value);
