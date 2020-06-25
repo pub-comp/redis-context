@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using StackExchange.Redis;
 
 namespace PubComp.RedisRepo
@@ -78,28 +79,40 @@ namespace PubComp.RedisRepo
         #region Redis Sets
 
         bool SetAdd<T>(string key, T value);
+        Task<bool> SetAddAsync<T>(string key, T value);
 
         long SetAdd<T>(string key, T[] values);
+        Task<long> SetAddAsync<T>(string key, T[] values);
 
         bool SetRemove<T>(string key, T value);
+        Task<bool> SetRemoveAsync<T>(string key, T value);
 
         long SetRemove<T>(string key, T[] values);
+        Task<long> SetRemoveAsync<T>(string key, T[] values);
 
         long SetLength(string key);
+        Task<long> SetLengthAsync(string key);
 
         T[] SetGetItems<T>(string key, Func<object, T> redisValueConverter);
+        Task<T[]> SetGetItemsAsync<T>(string key, Func<object, T> redisValueConverter);
 
         T[] SetsUnion<T>(string[] keys, Func<object, T> redisValueConverter);
+        Task<T[]> SetsUnionAsync<T>(string[] keys, Func<object, T> redisValueConverter);
 
         T[] SetsIntersect<T>(string[] keys, Func<object, T> redisValueConverter);
+        Task<T[]> SetsIntersectAsync<T>(string[] keys, Func<object, T> redisValueConverter);
 
         T[] SetsDiff<T>(string[] keys, Func<object, T> redisValueConverter);
+        Task<T[]> SetsDiffAsync<T>(string[] keys, Func<object, T> redisValueConverter);
 
         void AddToSet(string key, string[] values);
+        Task AddToSetAsync(string key, string[] values);
 
         long CountSetMembers(string key);
+        Task<long> CountSetMembersAsync(string key);
 
         string[] GetSetMembers(string key);
+        Task<string[]> GetSetMembersAsync(string key);
 
         /// <summary>
         /// Get the diff between the set at index 0 of <paramref name="keys"/> and all other sets in <paramref name="keys"/>
@@ -107,14 +120,29 @@ namespace PubComp.RedisRepo
         string[] GetSetsDifference(string[] keys);
 
         /// <summary>
+        /// Get the diff between the set at index 0 of <paramref name="keys"/> and all other sets in <paramref name="keys"/>
+        /// </summary>
+        Task<string[]> GetSetsDifferenceAsync(string[] keys);
+
+        /// <summary>
         /// Union sets at keys <paramref name="setKeys"/>
         /// </summary>
         string[] UnionSets(string[] keys);
 
         /// <summary>
+        /// Union sets at keys <paramref name="setKeys"/>
+        /// </summary>
+        Task<string[]> UnionSetsAsync(string[] keys);
+
+        /// <summary>
         /// Intersect sets at keys <paramref name="keys"/>
         /// </summary>
         string[] IntersectSets(string[] keys);
+
+        /// <summary>
+        /// Intersect sets at keys <paramref name="keys"/>
+        /// </summary>
+        Task<string[]> IntersectSetsAsync(string[] keys);
 
         /// <summary>
         /// Get the diff between the set at index 0 of <paramref name="keys"/> and all other sets in <paramref name="keys"/>
@@ -123,10 +151,22 @@ namespace PubComp.RedisRepo
         void StoreSetsDifference(string destinationKey, string[] keys);
 
         /// <summary>
+        /// Get the diff between the set at index 0 of <paramref name="keys"/> and all other sets in <paramref name="keys"/>
+        /// store the result at <param name="destinationKey"></param>
+        /// </summary>
+        Task StoreSetsDifferenceAsync(string destinationKey, string[] keys);
+
+        /// <summary>
         /// Union sets at keys <paramref name="keys"/>
         /// store the result at <param name="destinationKey"></param>
         /// </summary>
         void UnionSetsAndStore(string destinationKey, string[] keys);
+
+        /// <summary>
+        /// Union sets at keys <paramref name="keys"/>
+        /// store the result at <param name="destinationKey"></param>
+        /// </summary>
+        Task UnionSetsAndStoreAsync(string destinationKey, string[] keys);
 
         /// <summary>
         /// Intersect sets at keys <paramref name="keys"/>
@@ -134,7 +174,14 @@ namespace PubComp.RedisRepo
         /// </summary>
         void IntersectSetsAndStore(string destinationKey, string[] keys);
 
+        /// <summary>
+        /// Intersect sets at keys <paramref name="keys"/>
+        /// store the result at <param name="destinationKey"></param>
+        /// </summary>
+        Task IntersectSetsAndStoreAsync(string destinationKey, string[] keys);
+
         bool SetContains(string key, string member);
+        Task<bool> SetContainsAsync(string key, string member);
 
         bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl);
 
