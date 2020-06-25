@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace PubComp.RedisRepo.IntegrationTests
 {
@@ -76,7 +77,7 @@ namespace PubComp.RedisRepo.IntegrationTests
                 return RetryUtil.Retry(() => this.Database.KeyTimeToLive(key), 3);
             }
         }
-        
+
         #endregion
 
         #region Test Cases
@@ -303,6 +304,91 @@ namespace PubComp.RedisRepo.IntegrationTests
             CollectionAssert.AreEquivalent(
                 new[] { 9.0 },
                 redisContext.SetGetItems(key2, RedisValueConverter.ToDouble)
+                .OrderBy(x => x).ToList());
+        }
+
+        [TestMethod]
+        public async Task AsyncSetOperations_Parallel()
+        {
+            var key1 = TestContext.TestName + ".1";
+
+            redisContext.Delete(key1);
+
+            var range = Enumerable.Range(1, 10).ToList();
+
+            var tasks = range.Select(i => redisContext.SetAddAsync<int>(key1, i));
+            await Task.WhenAll(tasks);
+
+            var set = (await redisContext.SetGetItemsAsync(key1, RedisValueConverter.ToInt))
+                .OrderBy(x => x).ToList();
+
+            CollectionAssert.AreEquivalent(range, set);
+        }
+
+        [TestMethod]
+        public async Task AsyncSetOperations_Double()
+        {
+            var key1 = TestContext.TestName + ".1";
+            var key2 = TestContext.TestName + ".2";
+            var key3 = TestContext.TestName + ".3";
+
+            redisContext.Delete(key1);
+            redisContext.Delete(key2);
+            redisContext.Delete(key3);
+
+            await redisContext.SetAddAsync<double>(key1, new[] { 5.0, 2.0, 1.5 });
+            await redisContext.SetAddAsync<double>(key1, 3.5);
+
+            CollectionAssert.AreEquivalent(
+                new[] { 1.5, 2.0, 3.5, 5.0 },
+                (await redisContext.SetGetItemsAsync(key1, RedisValueConverter.ToDouble))
+                .OrderBy(x => x).ToList());
+
+            await redisContext.SetAddAsync<double>(key2, new[] { 7.0, 4.0, 1.5 });
+            await redisContext.SetAddAsync<double>(key3, new[] { 1.5, 7.0, 3.5, 8.5 });
+
+            var actualIntersect123 = await redisContext.SetsIntersectAsync(
+                new[] { key1, key2, key3 }, RedisValueConverter.ToDouble);
+            CollectionAssert.AreEquivalent(
+                new[] { 1.5 },
+                actualIntersect123.OrderBy(x => x).ToList());
+
+            var actualUnion123 = await redisContext.SetsUnionAsync(
+                new[] { key1, key2, key3 }, RedisValueConverter.ToDouble);
+            CollectionAssert.AreEquivalent(
+                new[] { 1.5, 2.0, 3.5, 4.0, 5.0, 7.0, 8.5 },
+                actualUnion123.OrderBy(x => x).ToList());
+
+            var actualMinus123 = await redisContext.SetsDiffAsync(
+                new[] { key1, key2, key3 }, RedisValueConverter.ToDouble);
+            CollectionAssert.AreEquivalent(
+                new[] { 2.0, 5.0 },
+                actualMinus123.OrderBy(x => x).ToList());
+
+            Assert.AreEqual(4, await redisContext.SetLengthAsync(key1));
+            Assert.AreEqual(3, await redisContext.SetLengthAsync(key2));
+            Assert.AreEqual(4, await redisContext.SetLengthAsync(key3));
+
+            await redisContext.SetRemoveAsync<double>(key1, 2.0);
+            Assert.AreEqual(3, await redisContext.SetLengthAsync(key1));
+            CollectionAssert.AreEquivalent(
+                new[] { 1.5, 3.5, 5.0 },
+                (await redisContext.SetGetItemsAsync(key1, RedisValueConverter.ToDouble))
+                .OrderBy(x => x).ToList());
+
+            await redisContext.SetRemoveAsync<double>(key3, new[] { 2.0, 8.5, 7.0 });
+            Assert.AreEqual(2, await redisContext.SetLengthAsync(key3));
+            CollectionAssert.AreEquivalent(
+                new[] { 1.5, 3.5 },
+                (await redisContext.SetGetItemsAsync(key3, RedisValueConverter.ToDouble))
+                .OrderBy(x => x).ToList());
+
+            redisContext.Delete(key2);
+            await redisContext.SetAddAsync<double>(key2, 9.0);
+            Assert.AreEqual(1, await redisContext.SetLengthAsync(key2));
+            CollectionAssert.AreEquivalent(
+                new[] { 9.0 },
+                (await redisContext.SetGetItemsAsync(key2, RedisValueConverter.ToDouble))
                 .OrderBy(x => x).ToList());
         }
 
@@ -695,9 +781,26 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
 
         [TestMethod]
+        public async Task TestAddToRedisSetAsync()
+        {
+            const string key = "k1";
+            var values = new[] { "bar", "bar", "a", "b", "c" };
+
+            await redisContext.AddToSetAsync(key, values);
+
+            await ValidateSetResultsAsync(key, new[] { "a", "b", "c", "bar" });
+        }
+
+        [TestMethod]
         public void TestSetContainsTrue()
         {
             TestSetContains("a", "a", true);
+        }
+
+        [TestMethod]
+        public async Task TestSetContainsTrueAsync()
+        {
+            await TestSetContainsAsync("a", "a", true);
         }
 
         [TestMethod]
@@ -706,6 +809,11 @@ namespace PubComp.RedisRepo.IntegrationTests
             TestSetContains("a", "b", false);
         }
 
+        [TestMethod]
+        public async Task TestSetContainsFalseAsync()
+        {
+            await TestSetContainsAsync("a", "b", false);
+        }
 
         [TestMethod]
         public void TestCountSetMembers()
@@ -716,6 +824,17 @@ namespace PubComp.RedisRepo.IntegrationTests
             redisContext.AddToSet(key, values);
 
             Assert.AreEqual(4, redisContext.CountSetMembers(key));
+        }
+
+        [TestMethod]
+        public async Task TestCountSetMembersAsync()
+        {
+            const string key = "k2";
+            var values = new[] { "bar", "bar", "a", "b", "c", "a", "b" };
+
+            await redisContext.AddToSetAsync(key, values);
+
+            Assert.AreEqual(4, await redisContext.CountSetMembersAsync(key));
         }
 
         [TestMethod]
@@ -731,6 +850,22 @@ namespace PubComp.RedisRepo.IntegrationTests
             redisContext.AddToSet(key2, values2);
 
             var results = redisContext.GetSetsDifference(new[] { key1, key2 });
+            CollectionAssert.AreEquivalent(new[] { "c", "d", "e" }, results);
+        }
+
+        [TestMethod]
+        public async Task TestSetsDiffAsync()
+        {
+            const string key1 = "testSetDiff1";
+            var values1 = new[] { "a", "b", "c", "d", "e" };
+
+            const string key2 = "testSetDiff2";
+            var values2 = new[] { "a", "b", };
+
+            await redisContext.AddToSetAsync(key1, values1);
+            await redisContext.AddToSetAsync(key2, values2);
+
+            var results = await redisContext.GetSetsDifferenceAsync(new[] { key1, key2 });
             CollectionAssert.AreEquivalent(new[] { "c", "d", "e" }, results);
         }
 
@@ -751,6 +886,22 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
 
         [TestMethod]
+        public async Task TestSetsUnionAsync()
+        {
+            const string key1 = "TestSetsUnion1";
+            var values1 = new[] { "a", "c" };
+
+            const string key2 = "TestSetsUnion2";
+            var values2 = new[] { "a", "b" };
+
+            await redisContext.AddToSetAsync(key1, values1);
+            await redisContext.AddToSetAsync(key2, values2);
+
+            var results = await redisContext.UnionSetsAsync(new[] { key1, key2 });
+            CollectionAssert.AreEquivalent(new[] { "a", "b", "c" }, results);
+        }
+
+        [TestMethod]
         public void TestSetsIntersect()
         {
             const string key1 = "TestSetsIntersect1";
@@ -766,9 +917,31 @@ namespace PubComp.RedisRepo.IntegrationTests
             CollectionAssert.AreEquivalent(new[] { "a" }, results);
         }
 
+        [TestMethod]
+        public async Task TestSetsIntersectAsync()
+        {
+            const string key1 = "TestSetsIntersect1";
+            var values1 = new[] { "a", "c" };
+
+            const string key2 = "TestSetsIntersect2";
+            var values2 = new[] { "a", "b" };
+
+            await redisContext.AddToSetAsync(key1, values1);
+            await redisContext.AddToSetAsync(key2, values2);
+
+            var results = await redisContext.IntersectSetsAsync(new[] { key1, key2 });
+            CollectionAssert.AreEquivalent(new[] { "a" }, results);
+        }
+
         private void ValidateSetResults(string key, string[] expected)
         {
             var valuesFromRedis = redisContext.GetSetMembers(key);
+            CollectionAssert.AreEquivalent(expected, valuesFromRedis);
+        }
+
+        private async Task ValidateSetResultsAsync(string key, string[] expected)
+        {
+            var valuesFromRedis = await redisContext.GetSetMembersAsync(key);
             CollectionAssert.AreEquivalent(expected, valuesFromRedis);
         }
 
@@ -781,6 +954,18 @@ namespace PubComp.RedisRepo.IntegrationTests
             redisContext.AddToSet(key, new[] { valueToAdd });
 
             var setContains = redisContext.SetContains(key, searchForValue);
+            Assert.AreEqual(expected, setContains);
+        }
+
+        public async Task TestSetContainsAsync(string valueToAdd, string searchForValue, bool expected)
+        {
+            const string key = "testSetContains";
+            var values = new[] { "foo", "bar" };
+
+            await redisContext.AddToSetAsync(key, values);
+            await redisContext.AddToSetAsync(key, new[] { valueToAdd });
+
+            var setContains = await redisContext.SetContainsAsync(key, searchForValue);
             Assert.AreEqual(expected, setContains);
         }
 

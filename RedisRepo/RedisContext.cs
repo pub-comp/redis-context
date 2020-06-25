@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace PubComp.RedisRepo
 {
@@ -265,9 +266,17 @@ namespace PubComp.RedisRepo
         {
             return RetryUtil.Retry(func, maxAttempts);
         }
+        public async static Task<TResult> RetryAsync<TResult>(Func<Task<TResult>> func, int maxAttempts)
+        {
+            return await RetryUtil.RetryAsync(func, maxAttempts).ConfigureAwait(false);
+        }
         public static void Retry(Action action, int maxAttempts)
         {
             RetryUtil.Retry(action, maxAttempts);
+        }
+        public async static Task RetryAsync(Func<Task> action, int maxAttempts)
+        {
+            await RetryUtil.RetryAsync(action, maxAttempts).ConfigureAwait(false);
         }
         #endregion
 
@@ -489,6 +498,17 @@ namespace PubComp.RedisRepo
             return result;
         }
 
+        public async Task<bool> SetAddAsync<T>(string key, T value)
+        {
+            var redisValue = value.ToRedis();
+
+            var result = await RetryAsync(async () =>
+                await this.Database.SetAddAsync(
+                    Key(key), redisValue, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+
+            return result;
+        }
+
         public long SetAdd<T>(string key, T[] values)
         {
             var redisValues = values?.Select(val => val.ToRedis()).ToArray();
@@ -500,10 +520,29 @@ namespace PubComp.RedisRepo
             return result;
         }
 
+        public async Task<long> SetAddAsync<T>(string key, T[] values)
+        {
+            var redisValues = values?.Select(val => val.ToRedis()).ToArray();
+
+            var result = await RetryAsync(async () =>
+                await this.Database.SetAddAsync(
+                    Key(key), redisValues, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+
+            return result;
+        }
+
         public T[] SetGetItems<T>(string key, Func<object, T> redisValueConverter)
         {
             var results = Retry(() =>
                 this.Database.SetMembers(Key(key), commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public async Task<T[]> SetGetItemsAsync<T>(string key, Func<object, T> redisValueConverter)
+        {
+            var results = await RetryAsync(async () =>
+                await this.Database.SetMembersAsync(Key(key), commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
 
             return results.Select(r => redisValueConverter(r)).ToArray();
         }
@@ -519,6 +558,17 @@ namespace PubComp.RedisRepo
             return results.Select(r => redisValueConverter(r)).ToArray();
         }
 
+        public async Task<T[]> SetsUnionAsync<T>(string[] keys, Func<object, T> redisValueConverter)
+        {
+            var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
+
+            var results = await RetryAsync(async () =>
+                await this.Database.SetCombineAsync(
+                    SetOperation.Union, redisKeys, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
         public T[] SetsIntersect<T>(string[] keys, Func<object, T> redisValueConverter)
         {
             var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
@@ -526,6 +576,17 @@ namespace PubComp.RedisRepo
             var results = Retry(() =>
                 this.Database.SetCombine(
                     SetOperation.Intersect, redisKeys, commandFlags), defaultRetries);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
+        public async Task<T[]> SetsIntersectAsync<T>(string[] keys, Func<object, T> redisValueConverter)
+        {
+            var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
+
+            var results = await RetryAsync(async () =>
+                await this.Database.SetCombineAsync(
+                    SetOperation.Intersect, redisKeys, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
 
             return results.Select(r => redisValueConverter(r)).ToArray();
         }
@@ -541,6 +602,17 @@ namespace PubComp.RedisRepo
             return results.Select(r => redisValueConverter(r)).ToArray();
         }
 
+        public async Task<T[]> SetsDiffAsync<T>(string[] keys, Func<object, T> redisValueConverter)
+        {
+            var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
+
+            var results = await RetryAsync(async () =>
+                await this.Database.SetCombineAsync(
+                    SetOperation.Difference, redisKeys, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+
+            return results.Select(r => redisValueConverter(r)).ToArray();
+        }
+
         public bool SetRemove<T>(string key, T value)
         {
             var redisValue = value.ToRedis();
@@ -548,6 +620,17 @@ namespace PubComp.RedisRepo
             var result = Retry(() =>
                 this.Database.SetRemove(
                     Key(key), redisValue, commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        public async Task<bool> SetRemoveAsync<T>(string key, T value)
+        {
+            var redisValue = value.ToRedis();
+
+            var result = await RetryAsync(async () =>
+                await this.Database.SetRemoveAsync(
+                    Key(key), redisValue, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
 
             return result;
         }
@@ -563,10 +646,29 @@ namespace PubComp.RedisRepo
             return result;
         }
 
+        public async Task<long> SetRemoveAsync<T>(string key, T[] values)
+        {
+            var redisValues = values?.Select(val => val.ToRedis()).ToArray();
+
+            var result = await RetryAsync(async () =>
+                await this.Database.SetRemoveAsync(
+                    Key(key), redisValues, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+
+            return result;
+        }
+
         public long SetLength(string key)
         {
             var result = Retry(() =>
                 this.Database.SetLength(Key(key), commandFlags), defaultRetries);
+
+            return result;
+        }
+
+        public async Task<long> SetLengthAsync(string key)
+        {
+            var result = await RetryAsync(async () =>
+                await this.Database.SetLengthAsync(Key(key), commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
 
             return result;
         }
@@ -576,14 +678,30 @@ namespace PubComp.RedisRepo
             Retry(() => this.Database.SetAdd(Key(key), values.ToRedisValueArray(), flags: commandFlags), defaultRetries);
         }
 
+        public async Task AddToSetAsync(string key, string[] values)
+        {
+            await RetryAsync(async () => await this.Database.SetAddAsync(Key(key), values.ToRedisValueArray(), flags: commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+        }
+
         public long CountSetMembers(string key)
         {
             return Retry(() => this.Database.SetLength(Key(key), flags: commandFlags), defaultRetries);
         }
 
+        public async Task<long> CountSetMembersAsync(string key)
+        {
+            return await RetryAsync(async () => await this.Database.SetLengthAsync(Key(key), flags: commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+        }
+
         public string[] GetSetMembers(string key)
         {
             var results = Retry(() => this.Database.SetMembers(Key(key), flags: commandFlags), defaultRetries);
+            return results.ToStringArray();
+        }
+
+        public async Task<string[]> GetSetMembersAsync(string key)
+        {
+            var results = await RetryAsync(async () => await this.Database.SetMembersAsync(Key(key), flags: commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
             return results.ToStringArray();
         }
 
@@ -598,6 +716,16 @@ namespace PubComp.RedisRepo
         }
 
         /// <summary>
+        /// Get the diff between the set at index 0 of <paramref name="keys"/> and all other sets in <paramref name="keys"/>
+        /// </summary>
+        public async Task<string[]> GetSetsDifferenceAsync(string[] keys)
+        {
+            return await OperateOnSetAsync(
+                SetOperation.Difference,
+                keys).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Union sets at keys <paramref name="setKeys"/>
         /// </summary>
         public string[] UnionSets(string[] keys)
@@ -606,11 +734,27 @@ namespace PubComp.RedisRepo
         }
 
         /// <summary>
+        /// Union sets at keys <paramref name="setKeys"/>
+        /// </summary>
+        public async Task<string[]> UnionSetsAsync(string[] keys)
+        {
+            return await OperateOnSetAsync(SetOperation.Union, keys).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Intersect sets at keys <paramref name="keys"/>
         /// </summary>
         public string[] IntersectSets(string[] keys)
         {
             return OperateOnSet(SetOperation.Intersect, keys);
+        }
+
+        /// <summary>
+        /// Intersect sets at keys <paramref name="keys"/>
+        /// </summary>
+        public async Task<string[]> IntersectSetsAsync(string[] keys)
+        {
+            return await OperateOnSetAsync(SetOperation.Intersect, keys).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -626,12 +770,33 @@ namespace PubComp.RedisRepo
         }
 
         /// <summary>
+        /// Get the diff between the set at index 0 of <paramref name="keys"/> and all other sets in <paramref name="keys"/>
+        /// store the result at <param name="destinationKey"></param>
+        /// </summary>
+        public async Task StoreSetsDifferenceAsync(string destinationKey, string[] keys)
+        {
+            await OperateOnSetAndStoreAsync(
+                SetOperation.Difference,
+                destinationKey,
+                keys).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Union sets at keys <paramref name="keys"/>
         /// store the result at <param name="destinationKey"></param>
         /// </summary>
         public void UnionSetsAndStore(string destinationKey, string[] keys)
         {
             OperateOnSetAndStore(SetOperation.Union, destinationKey, keys);
+        }
+
+        /// <summary>
+        /// Union sets at keys <paramref name="keys"/>
+        /// store the result at <param name="destinationKey"></param>
+        /// </summary>
+        public async Task UnionSetsAndStoreAsync(string destinationKey, string[] keys)
+        {
+            await OperateOnSetAndStoreAsync(SetOperation.Union, destinationKey, keys).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -643,9 +808,23 @@ namespace PubComp.RedisRepo
             OperateOnSetAndStore(SetOperation.Intersect, destinationKey, keys);
         }
 
+        /// <summary>
+        /// Intersect sets at keys <paramref name="keys"/>
+        /// store the result at <param name="destinationKey"></param>
+        /// </summary>
+        public async Task IntersectSetsAndStoreAsync(string destinationKey, string[] keys)
+        {
+            await OperateOnSetAndStoreAsync(SetOperation.Intersect, destinationKey, keys).ConfigureAwait(false);
+        }
+
         public bool SetContains(string key, string member)
         {
             return Retry(() => this.Database.SetContains(Key(key), member, commandFlags), defaultRetries);
+        }
+
+        public async Task<bool> SetContainsAsync(string key, string member)
+        {
+            return await RetryAsync(async () => await this.Database.SetContainsAsync(Key(key), member, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
         }
 
         #region set helpers
@@ -659,6 +838,16 @@ namespace PubComp.RedisRepo
 
             return results?.ToStringArray();
         }
+        private async Task<string[]> OperateOnSetAsync(SetOperation op, string[] keys)
+        {
+            if (keys == null || keys.Length == 0) return null;
+
+            var redisKeys = keys.Select(c => (RedisKey)Key(c)).ToArray();
+            var results =
+                 await RetryAsync(async () => await this.Database.SetCombineAsync(op, redisKeys, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+
+            return results?.ToStringArray();
+        }
 
         private void OperateOnSetAndStore(SetOperation op, string destinationKey, string[] keys)
         {
@@ -668,6 +857,17 @@ namespace PubComp.RedisRepo
             var redisKeys = keys.Select(c => (RedisKey)Key(c)).ToArray();
 
             Retry(() => this.Database.SetCombineAndStore(op, Key(destinationKey), redisKeys, commandFlags), defaultRetries);
+
+        }
+
+        private async Task OperateOnSetAndStoreAsync(SetOperation op, string destinationKey, string[] keys)
+        {
+            if (keys == null || keys.Length == 0)
+                return;
+
+            var redisKeys = keys.Select(c => (RedisKey)Key(c)).ToArray();
+
+            await RetryAsync(async () => await this.Database.SetCombineAndStoreAsync(op, Key(destinationKey), redisKeys, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
 
         }
         #endregion
