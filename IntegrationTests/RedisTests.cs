@@ -308,24 +308,6 @@ namespace PubComp.RedisRepo.IntegrationTests
         }
 
         [TestMethod]
-        public async Task AsyncSetOperations_Parallel()
-        {
-            var key1 = TestContext.TestName + ".1";
-
-            redisContext.Delete(key1);
-
-            var range = Enumerable.Range(1, 10).ToList();
-
-            var tasks = range.Select(i => redisContext.SetAddAsync<int>(key1, i));
-            await Task.WhenAll(tasks);
-
-            var set = (await redisContext.SetGetItemsAsync(key1, RedisValueConverter.ToInt))
-                .OrderBy(x => x).ToList();
-
-            CollectionAssert.AreEquivalent(range, set);
-        }
-
-        [TestMethod]
         public async Task AsyncSetOperations_Double()
         {
             var key1 = TestContext.TestName + ".1";
@@ -390,6 +372,48 @@ namespace PubComp.RedisRepo.IntegrationTests
                 new[] { 9.0 },
                 (await redisContext.SetGetItemsAsync(key2, RedisValueConverter.ToDouble))
                 .OrderBy(x => x).ToList());
+        }
+
+        [TestMethod]
+        public async Task AsyncSetOperations_Parallel()
+        {
+            var key1 = TestContext.TestName + ".1";
+
+            redisContext.Delete(key1);
+
+            var range = Enumerable.Range(1, 10).ToList();
+
+            var tasks = range.Select(i => redisContext.SetAddAsync<int>(key1, i));
+            await Task.WhenAll(tasks);
+
+            var set = (await redisContext.SetGetItemsAsync(key1, RedisValueConverter.ToInt))
+                .OrderBy(x => x).ToList();
+
+            CollectionAssert.AreEquivalent(range, set);
+        }
+
+
+        [TestMethod]
+        public async Task SetOperations_NullEmptyValuesParam()
+        {
+            var key1 = TestContext.TestName + ".1";
+
+            redisContext.Delete(key1);
+
+            int[] nullValues = null;
+            int[] emptyValues = new int[0];
+
+            Assert.ThrowsException<ArgumentNullException>(() => redisContext.SetAdd(key1, nullValues));
+            await Assert.ThrowsExceptionAsync<ArgumentNullException>(() => redisContext.SetAddAsync(key1, nullValues));
+
+            Assert.AreEqual(0, redisContext.SetAdd(key1, emptyValues));
+            Assert.AreEqual(0, await redisContext.SetAddAsync(key1, emptyValues));
+
+            Assert.ThrowsException<ArgumentNullException>(() => redisContext.SetRemove(key1, nullValues));
+            await Assert.ThrowsExceptionAsync<ArgumentNullException>(() => redisContext.SetRemoveAsync(key1, nullValues));
+
+            Assert.AreEqual(0, redisContext.SetRemove(key1, emptyValues));
+            Assert.AreEqual(0, await redisContext.SetRemoveAsync(key1, emptyValues));
         }
 
         [TestMethod]
