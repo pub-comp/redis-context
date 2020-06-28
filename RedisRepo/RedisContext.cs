@@ -502,16 +502,26 @@ namespace PubComp.RedisRepo
         {
             var redisValue = value.ToRedis();
 
-            var result = await RetryAsync(async () =>
-                await this.Database.SetAddAsync(
-                    Key(key), redisValue, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            var result = await RetryAsync(() =>
+                this.Database.SetAddAsync(
+                    Key(key), redisValue, commandFlags), defaultRetries).ConfigureAwait(false);
 
             return result;
         }
 
         public long SetAdd<T>(string key, T[] values)
         {
-            var redisValues = values?.Select(val => val.ToRedis()).ToArray();
+            if (values == null)
+            {
+                throw new ArgumentNullException(nameof(values));
+            }
+
+            if (values.Length == 0)
+            {
+                return 0;
+            }
+
+            var redisValues = values.Select(val => val.ToRedis()).ToArray();
 
             var result = Retry(() =>
                 this.Database.SetAdd(
@@ -522,11 +532,21 @@ namespace PubComp.RedisRepo
 
         public async Task<long> SetAddAsync<T>(string key, T[] values)
         {
-            var redisValues = values?.Select(val => val.ToRedis()).ToArray();
+            if (values == null)
+            {
+                throw new ArgumentNullException(nameof(values));
+            }
 
-            var result = await RetryAsync(async () =>
-                await this.Database.SetAddAsync(
-                    Key(key), redisValues, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            if (values.Length == 0)
+            {
+                return 0;
+            }
+
+            var redisValues = values.Select(val => val.ToRedis()).ToArray();
+
+            var result = await RetryAsync(() =>
+                this.Database.SetAddAsync(
+                    Key(key), redisValues, commandFlags), defaultRetries).ConfigureAwait(false);
 
             return result;
         }
@@ -541,8 +561,8 @@ namespace PubComp.RedisRepo
 
         public async Task<T[]> SetGetItemsAsync<T>(string key, Func<object, T> redisValueConverter)
         {
-            var results = await RetryAsync(async () =>
-                await this.Database.SetMembersAsync(Key(key), commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            var results = await RetryAsync(() =>
+                this.Database.SetMembersAsync(Key(key), commandFlags), defaultRetries).ConfigureAwait(false);
 
             return results.Select(r => redisValueConverter(r)).ToArray();
         }
@@ -562,9 +582,9 @@ namespace PubComp.RedisRepo
         {
             var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
 
-            var results = await RetryAsync(async () =>
-                await this.Database.SetCombineAsync(
-                    SetOperation.Union, redisKeys, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            var results = await RetryAsync(() =>
+                this.Database.SetCombineAsync(
+                    SetOperation.Union, redisKeys, commandFlags), defaultRetries).ConfigureAwait(false);
 
             return results.Select(r => redisValueConverter(r)).ToArray();
         }
@@ -584,9 +604,9 @@ namespace PubComp.RedisRepo
         {
             var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
 
-            var results = await RetryAsync(async () =>
-                await this.Database.SetCombineAsync(
-                    SetOperation.Intersect, redisKeys, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            var results = await RetryAsync(() =>
+                this.Database.SetCombineAsync(
+                    SetOperation.Intersect, redisKeys, commandFlags), defaultRetries).ConfigureAwait(false);
 
             return results.Select(r => redisValueConverter(r)).ToArray();
         }
@@ -606,9 +626,9 @@ namespace PubComp.RedisRepo
         {
             var redisKeys = keys.Select(k => (RedisKey)Key(k)).ToArray();
 
-            var results = await RetryAsync(async () =>
-                await this.Database.SetCombineAsync(
-                    SetOperation.Difference, redisKeys, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            var results = await RetryAsync(() =>
+                this.Database.SetCombineAsync(
+                    SetOperation.Difference, redisKeys, commandFlags), defaultRetries).ConfigureAwait(false);
 
             return results.Select(r => redisValueConverter(r)).ToArray();
         }
@@ -628,16 +648,26 @@ namespace PubComp.RedisRepo
         {
             var redisValue = value.ToRedis();
 
-            var result = await RetryAsync(async () =>
-                await this.Database.SetRemoveAsync(
-                    Key(key), redisValue, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            var result = await RetryAsync(() =>
+                this.Database.SetRemoveAsync(
+                    Key(key), redisValue, commandFlags), defaultRetries).ConfigureAwait(false);
 
             return result;
         }
 
         public long SetRemove<T>(string key, T[] values)
         {
-            var redisValues = values?.Select(val => val.ToRedis()).ToArray();
+            if (values == null)
+            {
+                throw new ArgumentNullException(nameof(values));
+            }
+
+            if (values.Length == 0)
+            {
+                return 0;
+            }
+
+            var redisValues = values.Select(val => val.ToRedis()).ToArray();
 
             var result = Retry(() =>
                 this.Database.SetRemove(
@@ -648,11 +678,21 @@ namespace PubComp.RedisRepo
 
         public async Task<long> SetRemoveAsync<T>(string key, T[] values)
         {
-            var redisValues = values?.Select(val => val.ToRedis()).ToArray();
+            if (values == null)
+            {
+                throw new ArgumentNullException(nameof(values));
+            }
 
-            var result = await RetryAsync(async () =>
-                await this.Database.SetRemoveAsync(
-                    Key(key), redisValues, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            if (values.Length == 0)
+            {
+                return 0;
+            }
+
+            var redisValues = values.Select(val => val.ToRedis()).ToArray();
+
+            var result = await RetryAsync(() =>
+                this.Database.SetRemoveAsync(
+                    Key(key), redisValues, commandFlags), defaultRetries).ConfigureAwait(false);
 
             return result;
         }
@@ -667,8 +707,8 @@ namespace PubComp.RedisRepo
 
         public async Task<long> SetLengthAsync(string key)
         {
-            var result = await RetryAsync(async () =>
-                await this.Database.SetLengthAsync(Key(key), commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            var result = await RetryAsync(() =>
+                this.Database.SetLengthAsync(Key(key), commandFlags), defaultRetries).ConfigureAwait(false);
 
             return result;
         }
@@ -680,7 +720,7 @@ namespace PubComp.RedisRepo
 
         public async Task AddToSetAsync(string key, string[] values)
         {
-            await RetryAsync(async () => await this.Database.SetAddAsync(Key(key), values.ToRedisValueArray(), flags: commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            await RetryAsync(() => this.Database.SetAddAsync(Key(key), values.ToRedisValueArray(), flags: commandFlags), defaultRetries).ConfigureAwait(false);
         }
 
         public long CountSetMembers(string key)
@@ -690,7 +730,7 @@ namespace PubComp.RedisRepo
 
         public async Task<long> CountSetMembersAsync(string key)
         {
-            return await RetryAsync(async () => await this.Database.SetLengthAsync(Key(key), flags: commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            return await RetryAsync(() => this.Database.SetLengthAsync(Key(key), flags: commandFlags), defaultRetries).ConfigureAwait(false);
         }
 
         public string[] GetSetMembers(string key)
@@ -701,7 +741,7 @@ namespace PubComp.RedisRepo
 
         public async Task<string[]> GetSetMembersAsync(string key)
         {
-            var results = await RetryAsync(async () => await this.Database.SetMembersAsync(Key(key), flags: commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            var results = await RetryAsync(() => this.Database.SetMembersAsync(Key(key), flags: commandFlags), defaultRetries).ConfigureAwait(false);
             return results.ToStringArray();
         }
 
@@ -824,7 +864,7 @@ namespace PubComp.RedisRepo
 
         public async Task<bool> SetContainsAsync(string key, string member)
         {
-            return await RetryAsync(async () => await this.Database.SetContainsAsync(Key(key), member, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            return await RetryAsync(() => this.Database.SetContainsAsync(Key(key), member, commandFlags), defaultRetries).ConfigureAwait(false);
         }
 
         #region set helpers
@@ -844,7 +884,7 @@ namespace PubComp.RedisRepo
 
             var redisKeys = keys.Select(c => (RedisKey)Key(c)).ToArray();
             var results =
-                 await RetryAsync(async () => await this.Database.SetCombineAsync(op, redisKeys, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+                 await RetryAsync(() => this.Database.SetCombineAsync(op, redisKeys, commandFlags), defaultRetries).ConfigureAwait(false);
 
             return results?.ToStringArray();
         }
@@ -867,7 +907,7 @@ namespace PubComp.RedisRepo
 
             var redisKeys = keys.Select(c => (RedisKey)Key(c)).ToArray();
 
-            await RetryAsync(async () => await this.Database.SetCombineAndStoreAsync(op, Key(destinationKey), redisKeys, commandFlags).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
+            await RetryAsync(() => this.Database.SetCombineAndStoreAsync(op, Key(destinationKey), redisKeys, commandFlags), defaultRetries).ConfigureAwait(false);
 
         }
         #endregion
