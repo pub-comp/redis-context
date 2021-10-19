@@ -947,19 +947,19 @@ namespace PubComp.RedisRepo
 
         public void ReleaseDistributedLock(string lockObjectName, string lockerName)
         {
-            var results = GetKeyAndTransaction(lockObjectName, lockerName);
-            var condResult = results.tran.AddCondition(Condition.StringEqual(results.key, lockerName));
-            var task = results.tran.KeyDeleteAsync(results.key, CommandFlags.None);
-            var execResult = results.tran.Execute();
+            var (key, tran) = GetKeyAndTransaction(lockObjectName, lockerName);
+            var condResult = tran.AddCondition(Condition.StringEqual(key, lockerName));
+            var task = tran.KeyDeleteAsync(key, CommandFlags.None);
+            var execResult = tran.Execute();
         }
 
         public async Task ReleaseDistributedLockAsync(string lockObjectName, string lockerName)
         {
-            var results = GetKeyAndTransaction(lockObjectName, lockerName);
-            var condResult = results.tran.AddCondition(Condition.StringEqual(results.key, lockerName));
+            var (key, tran) = GetKeyAndTransaction(lockObjectName, lockerName);
+            var condResult = tran.AddCondition(Condition.StringEqual(key, lockerName));
 
-            var task =await results.tran.KeyDeleteAsync(results.key, CommandFlags.None).ConfigureAwait(false);
-            var execResult =await results.tran.ExecuteAsync().ConfigureAwait(false);
+            var task =await tran.KeyDeleteAsync(key, CommandFlags.None).ConfigureAwait(false);
+            var execResult =await tran.ExecuteAsync().ConfigureAwait(false);
         }
 
         private (string key,ITransaction tran) GetKeyAndTransaction(string lockObjectName, string lockerName)

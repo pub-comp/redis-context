@@ -74,7 +74,9 @@ namespace PubComp.RedisRepo
                     {
                         LogManager.GetLogger(typeof(RedisContext).FullName).Warn(
                             ex, $"Retrying, attempt #{attempts}");
-                        Thread.Sleep(RetryDelay * (attempts + 1));
+
+                       await Task.Delay(RetryDelay * (attempts + 1)).ConfigureAwait(false);
+                       
                     }
                     else
                     {
