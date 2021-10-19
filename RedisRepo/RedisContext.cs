@@ -947,15 +947,29 @@ namespace PubComp.RedisRepo
 
         public void ReleaseDistributedLock(string lockObjectName, string lockerName)
         {
-            var key = Key(lockObjectName);
-            var tran = this.Database.CreateTransaction();
-            var condResult = tran.AddCondition(Condition.StringEqual(key, lockerName));
-            var task = tran.KeyDeleteAsync(key, CommandFlags.None);
-            var execResult = tran.Execute();
-
-
+            var results = GetKeyAndTransaction(lockObjectName, lockerName);
+            var condResult = results.tran.AddCondition(Condition.StringEqual(results.key, lockerName));
+            var task = results.tran.KeyDeleteAsync(results.key, CommandFlags.None);
+            var execResult = results.tran.Execute();
         }
 
+        public async Task ReleaseDistributedLockAsync(string lockObjectName, string lockerName)
+        {
+            var results = GetKeyAndTransaction(lockObjectName, lockerName);
+            var condResult = results.tran.AddCondition(Condition.StringEqual(results.key, lockerName));
+
+            var task =await results.tran.KeyDeleteAsync(results.key, CommandFlags.None).ConfigureAwait(false);
+            var execResult =await results.tran.ExecuteAsync().ConfigureAwait(false);
+        }
+
+        private (string key,ITransaction tran) GetKeyAndTransaction(string lockObjectName, string lockerName)
+        {
+            var key = Key(lockObjectName);
+            var tran = this.Database.CreateTransaction();
+
+            return (key, tran);
+        }
+        
         private string GetLockScript()
         {
             return @"local isNew = redis.call('SETNX', @Key1, @StringArg1)

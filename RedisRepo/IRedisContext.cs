@@ -141,6 +141,8 @@ namespace PubComp.RedisRepo
 
         void ReleaseDistributedLock(string lockObjectName, string lockerName);
 
+        Task ReleaseDistributedLockAsync(string lockObjectName, string lockerName);
+
         #endregion
 
         #region Redis Hashes
