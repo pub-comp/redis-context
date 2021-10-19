@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using StackExchange.Redis;
+using System.Threading.Tasks;
 
 namespace PubComp.RedisRepo
 {
@@ -137,6 +136,8 @@ namespace PubComp.RedisRepo
         bool SetContains(string key, string member);
 
         bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl);
+
+        Task<bool> TryGetDistributedLockAsync(string lockObjectName, string lockerName, TimeSpan lockTtl);
 
         void ReleaseDistributedLock(string lockObjectName, string lockerName);
 

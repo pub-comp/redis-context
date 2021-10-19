@@ -52,6 +52,41 @@ namespace PubComp.RedisRepo
             return result;
         }
 
+        public static async Task<TResult> RetryAsync<TResult>(Func<Task<TResult>> func, int maxAttempts)
+        {
+            var result = default(TResult);
+
+            for (int attempts = 0; attempts < maxAttempts; attempts++)
+            {
+                try
+                {
+                    result = await func().ConfigureAwait(false);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    if (!TestExceptionForRetry(ex))
+                    {
+                        throw;
+                    }
+
+                    if (attempts < maxAttempts - 1)
+                    {
+                        LogManager.GetLogger(typeof(RedisContext).FullName).Warn(
+                            ex, $"Retrying, attempt #{attempts}");
+                        Thread.Sleep(RetryDelay * (attempts + 1));
+                    }
+                    else
+                    {
+                        LogManager.GetLogger(typeof(RedisContext).FullName).Error(
+                            ex, $"Failed, attempt #{attempts}");
+                        throw;
+                    }
+                }
+            }
+
+            return result;
+        }
         public static void Retry(Action action, int maxAttempts)
         {
             for (int attempts = 0; attempts < maxAttempts; attempts++)
