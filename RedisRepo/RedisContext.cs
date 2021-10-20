@@ -2,10 +2,10 @@
 using PubComp.RedisRepo.Exceptions;
 using StackExchange.Redis;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace PubComp.RedisRepo
 {
@@ -264,6 +264,11 @@ namespace PubComp.RedisRepo
         public static TResult Retry<TResult>(Func<TResult> func, int maxAttempts)
         {
             return RetryUtil.Retry(func, maxAttempts);
+        }
+
+        public static async Task<TResult> RetryAsync<TResult>(Func<Task<TResult>> func, int maxAttempts)
+        {
+            return await RetryUtil.RetryAsync(func, maxAttempts).ConfigureAwait(false);
         }
         public static void Retry(Action action, int maxAttempts)
         {
@@ -918,8 +923,56 @@ namespace PubComp.RedisRepo
         /// <returns></returns>
         public bool TryGetDistributedLock(string lockObjectName, string lockerName, TimeSpan lockTtl)
         {
+            var lockScript = GetLockScript();
 
-            const string lockScript = @"local isNew = redis.call('SETNX', @Key1, @StringArg1)
+            var args = this.CreateScriptKeyAndArguments();
+            args.Key1 = lockObjectName;
+            args.StringArg1 = lockerName;
+            args.IntArg1 = (int)lockTtl.TotalSeconds;
+
+            return this.RunScriptBool(lockScript, args);
+        }
+
+        public async Task<bool> TryGetDistributedLockAsync(string lockObjectName, string lockerName, TimeSpan lockTtl)
+        {
+            var lockScript = GetLockScript();
+
+            var args = this.CreateScriptKeyAndArguments();
+            args.Key1 = lockObjectName;
+            args.StringArg1 = lockerName;
+            args.IntArg1 = (int)lockTtl.TotalSeconds;
+
+            return await this.RunScriptBoolAsync(lockScript, args).ConfigureAwait(false);
+        }
+
+        public void ReleaseDistributedLock(string lockObjectName, string lockerName)
+        {
+            var (key, tran) = GetKeyAndTransaction(lockObjectName, lockerName);
+            var condResult = tran.AddCondition(Condition.StringEqual(key, lockerName));
+            var task = tran.KeyDeleteAsync(key, CommandFlags.None);
+            var execResult = tran.Execute();
+        }
+
+        public async Task ReleaseDistributedLockAsync(string lockObjectName, string lockerName)
+        {
+            var (key, tran) = GetKeyAndTransaction(lockObjectName, lockerName);
+            var condResult = tran.AddCondition(Condition.StringEqual(key, lockerName));
+
+            var task =await tran.KeyDeleteAsync(key, CommandFlags.None).ConfigureAwait(false);
+            var execResult =await tran.ExecuteAsync().ConfigureAwait(false);
+        }
+
+        private (string key,ITransaction tran) GetKeyAndTransaction(string lockObjectName, string lockerName)
+        {
+            var key = Key(lockObjectName);
+            var tran = this.Database.CreateTransaction();
+
+            return (key, tran);
+        }
+        
+        private string GetLockScript()
+        {
+            return @"local isNew = redis.call('SETNX', @Key1, @StringArg1)
 if isNew == 1 then 
     redis.call('EXPIRE', @Key1, @IntArg1)
     return true
@@ -933,24 +986,7 @@ end
 
 return false
 ";
-
-            var args = this.CreateScriptKeyAndArguments();
-            args.Key1 = lockObjectName;
-            args.StringArg1 = lockerName;
-            args.IntArg1 = (int)lockTtl.TotalSeconds;
-
-            return this.RunScriptBool(lockScript, args);
-        }
-
-        public void ReleaseDistributedLock(string lockObjectName, string lockerName)
-        {
-            var key = Key(lockObjectName);
-            var tran = this.Database.CreateTransaction();
-            var condResult = tran.AddCondition(Condition.StringEqual(key, lockerName));
-            var task = tran.KeyDeleteAsync(key, CommandFlags.None);
-            var execResult = tran.Execute();
-
-
+           
         }
         #endregion
 
@@ -1015,6 +1051,19 @@ return false
         public bool RunScriptBool(string script, RedisScriptKeysAndArguments keysAndParameters)
         {
             var result = Retry(() => this.RunScriptInternal(script, keysAndParameters), defaultRetries);
+
+            return (bool)result;
+        }
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns>result as bool</returns>
+        public async Task<bool> RunScriptBoolAsync(string script, RedisScriptKeysAndArguments keysAndParameters)
+        {
+            var result = await RetryAsync(async () => await this.RunScriptInternalAsync(script, keysAndParameters).ConfigureAwait(false), defaultRetries).ConfigureAwait(false);
 
             return (bool)result;
         }
@@ -1115,6 +1164,40 @@ return false
 
                 // run
                 return loadedLuaScript.Evaluate(db, keysAndParameters);
+            }
+        }
+
+        /// <summary>
+        /// Run a lua script against the connected redis instance
+        /// </summary>
+        /// <param name="script">the script to run. Keys should be @Key1, @Key2 ... @Key10. Int arguments: @IntArg1 .. @IntArg20. String arguments: @StringArg1 .. @StringArg20</param>
+        /// <param name="keysAndParameters">an instance of RedisScriptKeysAndArguments</param>
+        /// <returns></returns>
+        private async Task<RedisResult> RunScriptInternalAsync(string script, RedisScriptKeysAndArguments keysAndParameters)
+        {
+            var conn = this.Connection;
+            var db = conn.GetDatabase(this.DatabaseNumber);
+
+            if (!this.loadedScripts.TryGetValue(script, out var loadedLuaScript))
+            {
+                var server = conn.GetServer(hosts.First());
+                var prepared = LuaScript.Prepare(script);
+                this.loadedScripts[script] = loadedLuaScript = await prepared.LoadAsync(server).ConfigureAwait(false);
+            }
+
+            try
+            {
+                return await loadedLuaScript.EvaluateAsync(db, keysAndParameters).ConfigureAwait(false);
+            }
+            catch (RedisServerException)
+            {
+                // TODO: validate that the message is NOSCRIPT
+                var server = conn.GetServer(hosts.First());
+                var prepared = LuaScript.Prepare(script);
+                this.loadedScripts[script] = loadedLuaScript = await prepared.LoadAsync(server).ConfigureAwait(false);
+
+                // run
+                return await loadedLuaScript.EvaluateAsync(db, keysAndParameters).ConfigureAwait(false);
             }
         }
 

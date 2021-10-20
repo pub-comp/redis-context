@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace PubComp.RedisRepo.IntegrationTests
 {
@@ -616,6 +617,93 @@ namespace PubComp.RedisRepo.IntegrationTests
             Assert.IsTrue(exists, "lock was released by a wrong locker");
 
             redisContext.ReleaseDistributedLock(lockName, "locker1");
+            exists = redisContext.TryGet(lockName, out bool _);
+            Assert.IsFalse(exists, "lock was not released");
+        }
+
+
+        [TestMethod]
+        public async Task TestDistributedLockAsyncSuccess()
+        {
+            var res = await redisContext.TryGetDistributedLockAsync("object1", "myName", TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            Assert.IsTrue(res);
+
+            // same locker should be able to gain the lock again
+            res = await redisContext.TryGetDistributedLockAsync("object1", "myName", TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            Assert.IsTrue(res);
+        }
+
+        [TestMethod]
+        public async Task TestDistributedLockAsyncFail()
+        {
+            var res = await redisContext.TryGetDistributedLockAsync("object1", "otherLocker", TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            Assert.IsTrue(res);
+
+            // other locker should not be able to gain the lock
+            res = await redisContext.TryGetDistributedLockAsync("object1", "myName", TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            Assert.IsFalse(res);
+        }
+
+        [TestMethod]
+        public async Task TestDistributedLockSuccessAfterLockAsyncTimePasses()
+        {
+            var res = await redisContext.TryGetDistributedLockAsync("object1", "otherLocker", TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            Assert.IsTrue(res);
+
+            await Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
+            
+            // other locker should be able to gain the lock after the lock expires
+            res = await redisContext.TryGetDistributedLockAsync("object1", "myName", TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            Assert.IsTrue(res);
+        }
+
+        [TestMethod]
+        public async Task TestLockAsyncExtended()
+        {
+            const string lockName = nameof(TestLockExtended);
+            var res = await redisContext.TryGetDistributedLockAsync(lockName, "locker", TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+            await Task.Delay(4000).ConfigureAwait(false);
+            
+            res = await redisContext.TryGetDistributedLockAsync(lockName, "locker", TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+            var ttl = redisContext.GetTimeToLive(lockName);
+
+            Assert.IsNotNull(ttl, "TTL should exist");
+            Assert.IsTrue(ttl.Value.TotalSeconds > 3, "TTL was not extended");
+        }
+
+        [TestMethod]
+        public async Task TestLockAsyncNotExtendedByAnotherLocker()
+        {
+            const string lockName = nameof(TestLockExtended);
+            var res = await redisContext.TryGetDistributedLockAsync(lockName, "locker1", TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+            await Task.Delay(3000).ConfigureAwait(false);
+            res = await redisContext.TryGetDistributedLockAsync(lockName, "locker2", TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+            var ttl = redisContext.GetTimeToLive(lockName);
+
+            Assert.IsNotNull(ttl, "TTL should exist");
+            Assert.IsTrue(ttl.Value.TotalSeconds < 3, "Lock extended by wrong locker");
+        }
+
+
+        [TestMethod]
+        public async Task TestLockAsyncRelease()
+        {
+            const string lockName = nameof(TestLockRelease);
+            await redisContext.TryGetDistributedLockAsync(lockName, "locker1", TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+
+            await Task.Delay(500).ConfigureAwait(false);
+
+            await redisContext.ReleaseDistributedLockAsync(lockName, "locker2").ConfigureAwait(false);
+            await redisContext.ReleaseDistributedLockAsync(lockName, "locker3").ConfigureAwait(false);
+
+            var exists = redisContext.TryGet(lockName, out string _);
+            Assert.IsTrue(exists, "lock was released by a wrong locker");
+
+            await redisContext.ReleaseDistributedLockAsync(lockName, "locker1").ConfigureAwait(false);
             exists = redisContext.TryGet(lockName, out bool _);
             Assert.IsFalse(exists, "lock was not released");
         }
