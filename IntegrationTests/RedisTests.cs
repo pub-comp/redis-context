@@ -650,8 +650,8 @@ namespace PubComp.RedisRepo.IntegrationTests
             var res = await redisContext.TryGetDistributedLockAsync("object1", "otherLocker", TimeSpan.FromSeconds(2)).ConfigureAwait(false);
             Assert.IsTrue(res);
 
-            Thread.Sleep(TimeSpan.FromSeconds(3));
-
+            await Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
+            
             // other locker should be able to gain the lock after the lock expires
             res = await redisContext.TryGetDistributedLockAsync("object1", "myName", TimeSpan.FromSeconds(10)).ConfigureAwait(false);
             Assert.IsTrue(res);
@@ -662,7 +662,9 @@ namespace PubComp.RedisRepo.IntegrationTests
         {
             const string lockName = nameof(TestLockExtended);
             var res = await redisContext.TryGetDistributedLockAsync(lockName, "locker", TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-            Thread.Sleep(4000);
+
+            await Task.Delay(4000).ConfigureAwait(false);
+            
             res = await redisContext.TryGetDistributedLockAsync(lockName, "locker", TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
             var ttl = redisContext.GetTimeToLive(lockName);
@@ -676,7 +678,8 @@ namespace PubComp.RedisRepo.IntegrationTests
         {
             const string lockName = nameof(TestLockExtended);
             var res = await redisContext.TryGetDistributedLockAsync(lockName, "locker1", TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-            Thread.Sleep(3000);
+
+            await Task.Delay(3000).ConfigureAwait(false);
             res = await redisContext.TryGetDistributedLockAsync(lockName, "locker2", TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
             var ttl = redisContext.GetTimeToLive(lockName);
@@ -691,7 +694,9 @@ namespace PubComp.RedisRepo.IntegrationTests
         {
             const string lockName = nameof(TestLockRelease);
             await redisContext.TryGetDistributedLockAsync(lockName, "locker1", TimeSpan.FromSeconds(10)).ConfigureAwait(false);
-            Thread.Sleep(500);
+
+            await Task.Delay(500).ConfigureAwait(false);
+
             await redisContext.ReleaseDistributedLockAsync(lockName, "locker2").ConfigureAwait(false);
             await redisContext.ReleaseDistributedLockAsync(lockName, "locker3").ConfigureAwait(false);
 
