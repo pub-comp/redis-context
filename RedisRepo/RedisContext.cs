@@ -948,21 +948,21 @@ namespace PubComp.RedisRepo
         public void ReleaseDistributedLock(string lockObjectName, string lockerName)
         {
             var tran = ReleaseDistributedLockInternal(lockObjectName, lockerName);
-            _ = tran.Execute();
+            tran.Execute();
         }
 
-        public async Task ReleaseDistributedLockAsync(string lockObjectName, string lockerName)
+        public Task ReleaseDistributedLockAsync(string lockObjectName, string lockerName)
         {
             var tran = ReleaseDistributedLockInternal(lockObjectName, lockerName);
-            _ = await tran.ExecuteAsync().ConfigureAwait(false);
+            return tran.ExecuteAsync();
         }
 
         private ITransaction ReleaseDistributedLockInternal(string lockObjectName, string lockerName)
         {
             var key = Key(lockObjectName);
             var tran = this.Database.CreateTransaction();
-            _ = tran.AddCondition(Condition.StringEqual(key, lockerName));
-            _ = tran.KeyDeleteAsync(key, CommandFlags.None);
+            tran.AddCondition(Condition.StringEqual(key, lockerName));
+            tran.KeyDeleteAsync(key, CommandFlags.None);
             return tran;
         }
 
