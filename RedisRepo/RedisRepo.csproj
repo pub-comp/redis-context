@@ -10,8 +10,8 @@
     <IncludeSymbols>true</IncludeSymbols>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <!--Inc Version & AssemblyFileVersion each version-->
-    <AssemblyFileVersion>5.4.0.0</AssemblyFileVersion>
-    <Version>5.4.0</Version>
+    <AssemblyFileVersion>5.4.1.0</AssemblyFileVersion>
+    <Version>5.4.1</Version>
     <!--Don't inc AssemblyVersion for minor versions!-->
     <AssemblyVersion>5.0.0.0</AssemblyVersion>
   </PropertyGroup>
@@ -22,7 +22,4 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
 </Project>
